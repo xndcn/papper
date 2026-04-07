@@ -53,7 +53,7 @@
 
 **数据层 (Data Layer)**
 
-管理游戏的持久化存储和数据访问。SaveManager 封装 IndexedDB（通过 localForage 库），提供存档的读写接口。ContentLoader 负责加载和缓存预生成的 JSON 数据文件。ConfigManager 管理游戏配置（音量、画质、语言等）。数据层对上层提供统一的异步数据访问接口，屏蔽底层存储细节。
+管理游戏的持久化存储和数据访问。SaveManager 封装 IndexedDB（通过 Dexie.js 库），提供存档的读写接口。ContentLoader 负责加载和缓存预生成的 JSON 数据文件。ConfigManager 管理游戏配置（音量、画质、语言等）。数据层对上层提供统一的异步数据访问接口，屏蔽底层存储细节。
 
 **内容生成层 (Content Generation Layer)**
 
@@ -105,8 +105,8 @@ PhysicsSystem
 ```typescript
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
-  width: 320,                    // 低分辨率画布
-  height: 180,
+  width: 480,                    // 像素风基础分辨率（配合 32x32 tiles）
+  height: 270,
   pixelArt: true,                // 启用最近邻插值
   roundPixels: true,             // 整数像素对齐
   scale: {
@@ -123,7 +123,7 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 ```
 
-内部渲染分辨率固定为 320x180（16:9），通过整数倍缩放适配不同屏幕尺寸。所有精灵使用最近邻插值，保证像素风格清晰锐利。
+内部渲染分辨率固定为 480x270（16:9），与 32x32 tiles 对齐。通过整数倍缩放（x2=960x540, x4=1920x1080）适配不同屏幕尺寸。所有精灵使用最近邻插值，保证像素风格清晰锐利。
 
 #### InputManager (输入管理)
 
@@ -149,7 +149,7 @@ InputManager
 
 #### SaveManager
 
-基于 localForage 封装 IndexedDB 的异步存储接口，提供游戏存档的 CRUD 操作。
+基于 Dexie.js 封装 IndexedDB 的异步存储接口，提供游戏存档的 CRUD 操作。
 
 ```
 SaveManager
@@ -2275,7 +2275,7 @@ async function checkForUpdate(): Promise<void> {
 
 ### IndexedDB 存储结构
 
-通过 localForage 封装 IndexedDB，定义三个 store：
+通过 Dexie.js 封装 IndexedDB，定义三个 store：
 
 ```
 IndexedDB: "paper_wings_legend"
@@ -2298,28 +2298,27 @@ IndexedDB: "paper_wings_legend"
     └── key: "daily_seed_cache"    →  { date: string, seed: number }
 ```
 
-**localForage 初始化配置**：
+**Dexie.js 初始化配置**：
 
 ```typescript
-import localForage from 'localforage';
+import Dexie, { type Table } from 'dexie';
 
-const savesStore = localForage.createInstance({
-  name: 'paper_wings_legend',
-  storeName: 'saves',
-  description: '游戏存档数据',
-});
+class GameDatabase extends Dexie {
+  saves!: Table;
+  settings!: Table;
+  cache!: Table;
 
-const settingsStore = localForage.createInstance({
-  name: 'paper_wings_legend',
-  storeName: 'settings',
-  description: '用户设置',
-});
+  constructor() {
+    super('paper_wings_legend');
+    this.version(1).stores({
+      saves: 'key',       // 主存档/自动存档/备份（key: "main_save" | "auto_save" | "backup"）
+      settings: 'key',    // 用户设置（key: "game_settings"）
+      cache: 'key',       // 运行时缓存（key: "content_*" | "daily_seed_cache"）
+    });
+  }
+}
 
-const cacheStore = localForage.createInstance({
-  name: 'paper_wings_legend',
-  storeName: 'cache',
-  description: '运行时缓存',
-});
+export const db = new GameDatabase();
 ```
 
 **存储容量规划**：
@@ -2488,3 +2487,24 @@ src/
 │   └── GameState.ts
 └── main.ts                    # 入口文件
 ```
+
+---
+
+## 附录：已确认技术决策
+
+以下决策在项目初始化阶段（2026-04-07）讨论确认，作为后续实施基准。如有变更请更新本附录。
+
+| 项目 | 决策 | 备注 |
+|------|------|------|
+| Phaser 版本 | Phaser 3 (v3.87+) | 不建抽象层，不预留 Phaser 4 升级路径 |
+| 内部分辨率 | 480×270 | 配合 32px tiles，支持中文 UI；整数倍缩放至 960×540 / 1920×1080 |
+| IndexedDB 库 | Dexie.js | 支持 schema 版本迁移和索引查询（Phase 2 引入） |
+| 物理重力 | 可配置常量，默认 y=0.5 | 纸飞机轻物体，低重力提供更好滑翔手感 |
+| 物理 API | Phaser MatterPhysics 插件 | 不直接使用 Matter.js 原生 API，与 Phaser 场景深度集成 |
+| 测试策略 | Vitest 纯逻辑 + Playwright MCP 视觉验证 | 80% 覆盖率仅限 src/systems/ + src/utils/ |
+| 原型美术 | 纯 Phaser Graphics API | 验证物理手感阶段零外部资源依赖 |
+| PWA | 延后到 Phase 5 | 避免 Service Worker 干扰开发时 HMR |
+| 场景（初始） | 5 个核心场景 | Boot, Preload, MainMenu, Race, Result |
+| 发射交互 | 拖拽弹弓式 | 拖拽方向决定角度，距离决定力度 |
+| 飞行控制 | 轻触屏幕上/下半区 | 上半区抬头，下半区压头，微调攻角 |
+| 赛道视角 | 横向滚动 + 相机跟随 + 视差背景 | 3 层视差（远景 0.1x / 中景 0.3x / 近景 1.0x）|

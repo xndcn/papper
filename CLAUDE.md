@@ -4,7 +4,7 @@
 
 **Paper Wings Legend** (纸翼传说) is a 2D pixel-art roguelike paper airplane racing game running in mobile and desktop browsers.
 
-**Tech Stack**: Phaser 3/4 + TypeScript + Vite + Matter.js + IndexedDB + PWA
+**Tech Stack**: Phaser 3 (v3.87+) + TypeScript + Vite + Matter.js (via Phaser MatterPhysics plugin) + Dexie.js (IndexedDB) + PWA
 
 **Target**: Static deployment (GitHub Pages / Netlify), fully offline-capable.
 
@@ -85,10 +85,27 @@ pnpm preview          # Preview production build
 Implementation → Unit Test → Visual Verification (Playwright MCP) → Code Review → Commit
 ```
 
-- **Unit/Integration**: Vitest — game logic, systems, entities
-- **E2E**: Playwright — critical user flows
-- **Visual**: Playwright MCP — real-time browser verification during development
-- **Coverage**: 80% minimum
+- **Unit**: Vitest — pure logic only (`src/systems/`, `src/utils/`). Do NOT mock Phaser.
+- **Visual**: Playwright MCP — scenes, UI, interactions, rendering verification
+- **Coverage**: 80% minimum on `src/systems/` and `src/utils/` only (Phaser-dependent code excluded)
+- **E2E**: Playwright — critical user flows (introduced when needed)
+
+## Confirmed Technical Decisions
+
+| Decision | Choice | Notes |
+|----------|--------|-------|
+| Phaser version | 3 (v3.87+) | No abstraction layer for Phaser 4 migration |
+| Internal resolution | 480×270 | 16:9, aligned with 32px tiles |
+| IndexedDB wrapper | Dexie.js | Schema migration + indexed queries (introduced in Phase 2) |
+| Physics gravity | Configurable constant, default y=0.5 | Low gravity for paper airplane glide feel |
+| Physics API | Phaser MatterPhysics plugin | Not raw Matter.js API |
+| Test strategy | Vitest for pure logic, Playwright MCP for visual | 80% coverage on `systems/` + `utils/` only |
+| Prototype art | Pure Phaser Graphics API | No external assets until pixel art phase |
+| PWA | Deferred to Phase 5 | Avoid interfering with HMR during development |
+| Initial scenes | 5 core scenes | Boot, Preload, MainMenu, Race, Result |
+| Launch interaction | Drag slingshot style | Drag direction = angle, drag distance = power |
+| Flight control | Tap upper/lower screen half | Upper = nose up, Lower = nose down (pitch trim) |
+| Race view | Side-scrolling + camera follow + parallax | 3 layers: 0.1x / 0.3x / 1.0x scroll factor |
 
 ## Language Policy
 

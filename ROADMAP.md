@@ -5,9 +5,40 @@
 ## 当前阶段：项目初始化
 
 - [x] 创建项目文档体系
-- [ ] 初始化项目（Phaser + TypeScript + Vite）
-- [ ] 搭建基础场景框架
-- [ ] 实现第一个可玩的比赛原型
+- [x] 确认技术决策（分辨率、物理库、测试策略等），修正文档矛盾
+- [ ] **Step 1: 工程脚手架**
+  - [ ] package.json（pnpm + Phaser 3 + Vite + TypeScript）
+  - [ ] tsconfig.json（strict 模式，path alias `@/*`）
+  - [ ] vite.config.ts（Phaser 优化，PWA 占位注释）
+  - [ ] ESLint v9 flat config + Prettier
+  - [ ] Vitest 配置（覆盖率仅 systems/ + utils/）
+  - [ ] index.html + src/main.ts（480×270 Phaser 画布）
+  - [ ] 验证：`pnpm dev` 显示空白 Phaser 画布，无控制台报错
+- [ ] **Step 2: 场景框架**
+  - [ ] 5 个核心场景空壳（BootScene / PreloadScene / MainMenuScene / RaceScene / ResultScene）
+  - [ ] 完整场景流转（Boot→Preload→MainMenu→Race→Result→MainMenu）
+  - [ ] 类型定义（`src/types/index.ts`）+ 游戏常量（`src/config/constants.ts`）
+  - [ ] 验证：可点击完成全部场景导航，无报错
+- [ ] **Step 3: 物理发射系统**
+  - [ ] PhysicsSystem 纯逻辑模块（发射力计算、攻角计算、气动系数查表）
+  - [ ] math.ts 工具函数（向量运算、clamp、lerp）
+  - [ ] 拖拽弹弓发射交互 + 轨迹预览虚线
+  - [ ] 白色三角形纸飞机（Phaser Graphics + Matter.js 刚体）
+  - [ ] 地面静态物理体 + 碰撞检测
+  - [ ] 验证：可拖拽发射，飞机物理飞行并碰地停止
+- [ ] **Step 4: 飞行体验与计分**
+  - [ ] 升力/阻力气动模拟（查表法 + 攻角计算）
+  - [ ] 飞行俯仰控制（触屏上/下半区微调攻角）
+  - [ ] 相机跟随 + 3 层视差背景（0.1x / 0.3x / 1.0x）
+  - [ ] 着陆检测（地面碰撞 + 越界）+ 计分（距离 + 滞空时间）
+  - [ ] 完整比赛循环：菜单→发射→飞行→着陆→结算→菜单
+  - [ ] 验证：可完整游戏循环，飞行手感合理（有明显升力效果）
+- [ ] **Step 5: 测试与文档**
+  - [ ] PhysicsSystem 单元测试（Vitest，80%+ 覆盖率）
+  - [ ] math.ts 单元测试（Vitest，80%+ 覆盖率）
+  - [ ] Playwright MCP 视觉验证（全场景截图 + 交互测试）
+  - [ ] 更新 ROADMAP.md + CHANGELOG.md
+  - [ ] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过，`pnpm build` 成功
 
 ## Phase 1: MVP — 核心飞行体验
 

@@ -50,6 +50,8 @@
 
 ## 2. 选择 Phaser 的理由
 
+> **已确认选择 Phaser 3**（v3.87+）。不预留 Phaser 4 升级抽象层——等 Phaser 4 正式稳定后再评估迁移路径。
+
 综合评估后，**Phaser 3**（并关注 Phaser 4 升级路径）是本项目的最终选择。理由如下：
 
 ### 2.1 极致的 Bundle Size
@@ -185,13 +187,13 @@ const config: Phaser.Types.Core.GameConfig = {
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 320,              // 像素风基础分辨率
-    height: 180,
+    width: 480,              // 像素风基础分辨率（配合 32x32 tiles）
+    height: 270,
   },
   physics: {
     default: 'matter',
     matter: {
-      gravity: { x: 0, y: 1 },
+      gravity: { x: 0, y: 0.5 },  // 纸飞机低重力，提供更好滑翔手感
       debug: import.meta.env.DEV, // 开发环境显示物理调试线
     },
   },
