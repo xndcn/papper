@@ -14,11 +14,11 @@
   - [x] Vitest 配置（覆盖率仅 systems/ + utils/）
   - [x] index.html + src/main.ts（480×270 Phaser 画布）
   - [x] 验证：`pnpm dev` 显示空白 Phaser 画布，无控制台报错
-- [ ] **Step 2: 场景框架**
-  - [ ] 5 个核心场景空壳（BootScene / PreloadScene / MainMenuScene / RaceScene / ResultScene）
-  - [ ] 完整场景流转（Boot→Preload→MainMenu→Race→Result→MainMenu）
-  - [ ] 类型定义（`src/types/index.ts`）+ 游戏常量（`src/config/constants.ts`）
-  - [ ] 验证：可点击完成全部场景导航，无报错
+- [x] **Step 2: 场景框架**
+  - [x] 5 个核心场景空壳（BootScene / PreloadScene / MainMenuScene / RaceScene / ResultScene）
+  - [x] 完整场景流转（Boot→Preload→MainMenu→Race→Result→MainMenu）
+  - [x] 类型定义（`src/types/index.ts`）+ 游戏常量（`src/config/constants.ts`）
+  - [x] 验证：可点击完成全部场景导航，无报错
 - [ ] **Step 3: 物理发射系统**
   - [ ] PhysicsSystem 纯逻辑模块（发射力计算、攻角计算、气动系数查表）
   - [ ] math.ts 工具函数（向量运算、clamp、lerp）
