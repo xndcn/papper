@@ -6,14 +6,14 @@
 
 - [x] 创建项目文档体系
 - [x] 确认技术决策（分辨率、物理库、测试策略等），修正文档矛盾
-- [ ] **Step 1: 工程脚手架**
-  - [ ] package.json（pnpm + Phaser 3 + Vite + TypeScript）
-  - [ ] tsconfig.json（strict 模式，path alias `@/*`）
-  - [ ] vite.config.ts（Phaser 优化，PWA 占位注释）
-  - [ ] ESLint v9 flat config + Prettier
-  - [ ] Vitest 配置（覆盖率仅 systems/ + utils/）
-  - [ ] index.html + src/main.ts（480×270 Phaser 画布）
-  - [ ] 验证：`pnpm dev` 显示空白 Phaser 画布，无控制台报错
+- [x] **Step 1: 工程脚手架**
+  - [x] package.json（pnpm + Phaser 3 + Vite + TypeScript）
+  - [x] tsconfig.json（strict 模式，path alias `@/*`）
+  - [x] vite.config.ts（Phaser 优化，PWA 占位注释）
+  - [x] ESLint v9 flat config + Prettier
+  - [x] Vitest 配置（覆盖率仅 systems/ + utils/）
+  - [x] index.html + src/main.ts（480×270 Phaser 画布）
+  - [x] 验证：`pnpm dev` 显示空白 Phaser 画布，无控制台报错
 - [ ] **Step 2: 场景框架**
   - [ ] 5 个核心场景空壳（BootScene / PreloadScene / MainMenuScene / RaceScene / ResultScene）
   - [ ] 完整场景流转（Boot→Preload→MainMenu→Race→Result→MainMenu）

@@ -25,7 +25,7 @@
 
 | 技术 | 用途 |
 |------|------|
-| [Phaser 3/4](https://phaser.io/) | 游戏框架 |
+| [Phaser 3](https://phaser.io/) | 游戏框架 |
 | TypeScript | 开发语言 |
 | [Vite](https://vitejs.dev/) | 构建工具 |
 | Matter.js | 物理引擎（飞行模拟） |
@@ -51,6 +51,15 @@ pnpm install
 
 # 启动开发服务器
 pnpm dev
+
+# 运行单元测试
+pnpm test
+
+# 检查覆盖率
+pnpm test:coverage
+
+# 运行 Lint
+pnpm lint
 
 # 构建生产版本
 pnpm build
