@@ -11,12 +11,12 @@ import { CORE_SCENES } from '@/scenes';
 
 declare global {
   interface Window {
-    __PAPPER_GAME__?: Phaser.Game;
+    __PAPER_GAME__?: Phaser.Game;
   }
 }
 
 function syncGameReference(game: Phaser.Game | undefined): void {
-  window.__PAPPER_GAME__ = game;
+  window.__PAPER_GAME__ = game;
 }
 
 function createGame(): Phaser.Game {
