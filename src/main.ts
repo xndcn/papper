@@ -7,6 +7,17 @@ import {
   GAME_WIDTH,
   resolveMatterDebug,
 } from '@/utils/gameSettings';
+import { CORE_SCENES } from '@/scenes';
+
+declare global {
+  interface Window {
+    __PAPER_GAME__?: Phaser.Game;
+  }
+}
+
+function syncGameReference(game: Phaser.Game | undefined): void {
+  window.__PAPER_GAME__ = game;
+}
 
 function createGame(): Phaser.Game {
   return new Phaser.Game({
@@ -29,22 +40,21 @@ function createGame(): Phaser.Game {
         debug: resolveMatterDebug(import.meta.env.DEV),
       },
     },
-    scene: {
-      create() {
-        this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
-      },
-    },
+    scene: CORE_SCENES,
   });
 }
 
 let game = createGame();
+syncGameReference(game);
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
+    syncGameReference(undefined);
     game.destroy(true);
   });
 
   import.meta.hot.accept(() => {
     game = createGame();
+    syncGameReference(game);
   });
 }

@@ -23,3 +23,7 @@
   - 新增 `index.html`、`src/main.ts` 与 480×270 空白 Phaser 画布初始化
   - 新增 `src/utils/gameSettings.ts` 及其 Vitest 单元测试，覆盖率 100%
   - 完成 `pnpm lint`、`pnpm test:coverage`、`pnpm build` 与浏览器截图验证
+- 项目初始化 Step 2 场景框架：
+  - 新增 `src/config/constants.ts`、`src/types/index.ts` 与 5 个核心场景空壳
+  - 接入 Boot → Preload → MainMenu → Race → Result → MainMenu 最小闭环导航
+  - 新增场景常量单元测试，并通过 Playwright 验证场景流转与截图
