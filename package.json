@@ -1,0 +1,41 @@
+{
+  "name": "papper",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Paper Wings Legend browser game prototype",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/xndcn/papper.git"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/xndcn/papper/issues"
+  },
+  "homepage": "https://github.com/xndcn/papper#readme",
+  "packageManager": "pnpm@10.33.0",
+  "dependencies": {
+    "phaser": "3.90.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.1",
+    "@vitest/coverage-v8": "4.1.4",
+    "eslint": "9.39.4",
+    "eslint-config-prettier": "10.1.8",
+    "globals": "17.4.0",
+    "prettier": "3.8.2",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.58.1",
+    "vite": "7.3.2",
+    "vite-tsconfig-paths": "6.1.1",
+    "vitest": "4.1.4"
+  }
+}
