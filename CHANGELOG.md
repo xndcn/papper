@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### 变更
+- 将 Phase 1 MVP 路线图从 9 个概要条目细化为 7 个 Step（共 40+ 子任务），每个 Step 包含具体的模块/文件、验证标准和测试要求，便于 Agent 逐步执行
+
 ### 新增
 - 项目文档体系：README.md、CLAUDE.md、技术选型、游戏设计、系统架构、美术设计文档
 - 开发路线图 (ROADMAP.md)
