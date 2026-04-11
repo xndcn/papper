@@ -1,4 +1,5 @@
 import {
+  addVectors,
   clamp,
   lerp,
   normalizeVector,
@@ -39,6 +40,23 @@ export interface TrajectoryPreviewInput {
   readonly velocityScale?: number;
 }
 
+export interface AerodynamicForceInput {
+  readonly airplaneAngleRadians: number;
+  readonly velocity: Vector2Like;
+  readonly liftMultiplier?: number;
+  readonly dragMultiplier?: number;
+  readonly minSpeed?: number;
+}
+
+export type PitchControlDirection = 'up' | 'down' | 'neutral';
+
+export interface PitchControlInput {
+  readonly currentAngularVelocity: number;
+  readonly direction: PitchControlDirection;
+  readonly step?: number;
+  readonly maxAngularVelocity?: number;
+}
+
 const MIN_STAT = 1;
 const MAX_STAT = 10;
 const DEFAULT_MAX_DRAG_DISTANCE = 72;
@@ -50,6 +68,11 @@ const DEFAULT_TRAJECTORY_VELOCITY_SCALE = 22000;
 const DEFAULT_TRAJECTORY_GRAVITY_SCALE = 320;
 const MIN_AERO_ANGLE = -10;
 const MAX_AERO_ANGLE = 45;
+const DEFAULT_MIN_AERODYNAMIC_SPEED = 0.1;
+const DEFAULT_LIFT_MULTIPLIER = 0.00004;
+const DEFAULT_DRAG_MULTIPLIER = 0.000025;
+const DEFAULT_PITCH_STEP = 0.004;
+const DEFAULT_MAX_ANGULAR_VELOCITY = 0.06;
 
 export const AERO_LOOKUP_TABLE: ReadonlyArray<readonly [number, AeroCoefficients]> = [
   [-10, { lift: -0.4, drag: 0.04 }],
@@ -125,6 +148,46 @@ export function getAerodynamicCoefficients(angleOfAttackDegrees: number): AeroCo
   }
 
   return AERO_LOOKUP_TABLE[AERO_LOOKUP_TABLE.length - 1][1];
+}
+
+export function calculateAerodynamicForce({
+  airplaneAngleRadians,
+  velocity,
+  liftMultiplier = DEFAULT_LIFT_MULTIPLIER,
+  dragMultiplier = DEFAULT_DRAG_MULTIPLIER,
+  minSpeed = DEFAULT_MIN_AERODYNAMIC_SPEED,
+}: AerodynamicForceInput): Vector2Like {
+  const speed = vectorMagnitude(velocity);
+
+  if (speed <= minSpeed) {
+    return { x: 0, y: 0 };
+  }
+
+  const normalizedVelocity = normalizeVector(velocity);
+  const angleOfAttack = calculateAngleOfAttackDegrees(airplaneAngleRadians, velocity);
+  const coefficients = getAerodynamicCoefficients(angleOfAttack);
+  const liftDirection = { x: normalizedVelocity.y, y: -normalizedVelocity.x };
+  const dragDirection = scaleVector(normalizedVelocity, -1);
+  const speedSquared = speed * speed;
+
+  return addVectors(
+    scaleVector(liftDirection, coefficients.lift * liftMultiplier * speedSquared),
+    scaleVector(dragDirection, coefficients.drag * dragMultiplier * speedSquared),
+  );
+}
+
+export function resolvePitchControlAngularVelocity({
+  currentAngularVelocity,
+  direction,
+  step = DEFAULT_PITCH_STEP,
+  maxAngularVelocity = DEFAULT_MAX_ANGULAR_VELOCITY,
+}: PitchControlInput): number {
+  if (direction === 'neutral') {
+    return clamp(currentAngularVelocity, -maxAngularVelocity, maxAngularVelocity);
+  }
+
+  const delta = direction === 'up' ? -step : step;
+  return clamp(currentAngularVelocity + delta, -maxAngularVelocity, maxAngularVelocity);
 }
 
 export function predictTrajectoryPoints({

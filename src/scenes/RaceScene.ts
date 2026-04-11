@@ -11,11 +11,15 @@ import {
   SCENE_TITLE_STYLE,
 } from '@/config/constants';
 import {
+  calculateAerodynamicForce,
   calculateAngleOfAttackDegrees,
   calculateLaunchVector,
   getAerodynamicCoefficients,
   predictTrajectoryPoints,
+  resolvePitchControlAngularVelocity,
+  type PitchControlDirection,
 } from '@/systems/PhysicsSystem';
+import { calculateFlightScore, isFlightOutOfBounds } from '@/systems/RaceSystem';
 import type { ResultSceneData, SceneNavigationButton } from '@/types';
 import { clamp, subtractVectors, vectorMagnitude, type Vector2Like } from '@/utils/math';
 
@@ -33,6 +37,13 @@ const PAPER_PLANE_SPEED_STAT = 6;
 const GROUND_HEIGHT = 34;
 const GROUND_TOP_Y = GAME_HEIGHT - GROUND_HEIGHT;
 const PLANE_PICK_RADIUS = 28;
+const RACE_WORLD_WIDTH = 2200;
+const FLIGHT_BOUNDS = {
+  minX: 0,
+  maxX: RACE_WORLD_WIDTH - 28,
+  minY: -120,
+  maxY: GAME_HEIGHT + 120,
+} as const;
 
 function hasBodyLabel(body: MatterJS.BodyType | undefined, label: string): boolean {
   return body?.label === label;
@@ -57,9 +68,13 @@ export class RaceScene extends Phaser.Scene {
   private hasLaunched = false;
   private hasLanded = false;
   private flightStartTime = 0;
+  private launchStartX = LAUNCH_ANCHOR.x;
+  private maxFlightX = LAUNCH_ANCHOR.x;
+  private pitchDirection: PitchControlDirection = 'neutral';
   private resultData: ResultSceneData = {
     distance: 0,
     flightTimeMs: 0,
+    score: 0,
     summary: '请先完成一次拖拽发射。',
   };
 
@@ -69,6 +84,8 @@ export class RaceScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
+    this.cameras.main.setBounds(0, 0, RACE_WORLD_WIDTH, GAME_HEIGHT);
+    this.createParallaxBackground();
     this.createRaceHud();
     this.createGround();
     this.createAnchorMarker();
@@ -78,7 +95,7 @@ export class RaceScene extends Phaser.Scene {
     this.trajectoryGraphics = this.add.graphics();
     this.airplane = this.createAirplane();
     this.finishButton = this.createFinishButton();
-    this.statusText = this.add.text(24, 58, '', SCENE_SUBTITLE_STYLE);
+    this.statusText = this.add.text(24, 58, '', SCENE_SUBTITLE_STYLE).setScrollFactor(0);
 
     this.registerInput();
     this.registerCollisionListener();
@@ -91,31 +108,77 @@ export class RaceScene extends Phaser.Scene {
     }
 
     const velocity = this.airplane.body?.velocity ?? { x: 0, y: 0 };
+    const currentAngularVelocity = this.airplane.body?.angularVelocity ?? 0;
+    const aerodynamicForce = calculateAerodynamicForce({
+      airplaneAngleRadians: this.airplane.rotation,
+      velocity,
+      liftMultiplier: 0.00009,
+      dragMultiplier: 0.00002,
+      minSpeed: 1.4,
+    });
+
+    this.airplane.applyForce(toPhaserVector(aerodynamicForce));
+    this.airplane.setAngularVelocity(
+      resolvePitchControlAngularVelocity({
+        currentAngularVelocity,
+        direction: this.pitchDirection,
+      }),
+    );
+
+    if (isFlightOutOfBounds({ x: this.airplane.x, y: this.airplane.y }, FLIGHT_BOUNDS)) {
+      this.handleLanding('out_of_bounds');
+      return;
+    }
+
     const speed = vectorMagnitude(velocity);
+    this.maxFlightX = Math.max(this.maxFlightX, this.airplane.x);
     const angleOfAttack = calculateAngleOfAttackDegrees(this.airplane.rotation, velocity);
     const coefficients = getAerodynamicCoefficients(angleOfAttack);
 
     this.statusText.setText([
       `速度 ${speed.toFixed(2)} px/s · 攻角 ${formatSignedAngle(angleOfAttack)}`,
       `升力系数 ${coefficients.lift.toFixed(2)} · 阻力系数 ${coefficients.drag.toFixed(3)}`,
-      '等待落地后进入结算，按 R 可立即重置本次发射。',
+      `飞行控制：${this.pitchDirection === 'neutral' ? '未输入' : this.pitchDirection === 'up' ? '抬头' : '压头'} · 上半屏抬头 / 下半屏压头`,
     ]);
   }
 
   private createRaceHud(): void {
-    this.add.text(GAME_WIDTH / 2, 26, '物理发射测试场', SCENE_TITLE_STYLE).setOrigin(0.5);
+    this.add.text(GAME_WIDTH / 2, 26, '飞行体验测试场', SCENE_TITLE_STYLE).setOrigin(0.5).setScrollFactor(0);
     this.add
-      .text(GAME_WIDTH / 2, 48, 'Step 3：拖拽纸飞机并松手，验证刚体飞行、轨迹预览与地面碰撞', SCENE_SUBTITLE_STYLE)
-      .setOrigin(0.5);
+      .text(
+        GAME_WIDTH / 2,
+        48,
+        'Step 4：升阻力 + 俯仰控制 + 相机跟随视差 + 着陆/越界计分',
+        SCENE_SUBTITLE_STYLE,
+      )
+      .setOrigin(0.5)
+      .setScrollFactor(0);
     this.add
-      .text(24, GAME_HEIGHT - 18, '拖拽飞机蓄力，松手发射；按 R 可重置本次尝试。', SCENE_HINT_STYLE)
-      .setOrigin(0, 0.5);
+      .text(24, GAME_HEIGHT - 18, '拖拽发射后，轻触上/下半屏微调机头；按 R 可重置本次尝试。', SCENE_HINT_STYLE)
+      .setOrigin(0, 0.5)
+      .setScrollFactor(0);
+  }
+
+  private createParallaxBackground(): void {
+    const farColor = 0x1d4ed8;
+    const midColor = 0x2563eb;
+    const nearColor = 0x60a5fa;
+
+    for (let index = 0; index < 8; index += 1) {
+      const x = 140 + index * 300;
+      this.add.ellipse(x, 176, 320, 96, farColor, 0.3).setScrollFactor(0.1);
+      this.add.circle(x - 30, 68 + (index % 2) * 8, 18, 0xffffff, 0.65).setScrollFactor(0.3);
+      this.add.circle(x, 60 + (index % 3) * 12, 24, 0xffffff, 0.65).setScrollFactor(0.3);
+      this.add.circle(x + 26, 72 + (index % 2) * 8, 16, 0xffffff, 0.65).setScrollFactor(0.3);
+      this.add.ellipse(x, 200, 240, 72, midColor, 0.55).setScrollFactor(0.3);
+      this.add.rectangle(x, 214, 180, 34, nearColor, 0.5).setScrollFactor(1);
+    }
   }
 
   private createGround(): void {
-    this.add.rectangle(GAME_WIDTH / 2, GROUND_TOP_Y + GROUND_HEIGHT / 2, GAME_WIDTH, GROUND_HEIGHT, 0x1e293b);
-    this.add.rectangle(GAME_WIDTH / 2, GROUND_TOP_Y, GAME_WIDTH, 2, 0x94a3b8);
-    this.matter.add.rectangle(GAME_WIDTH / 2, GROUND_TOP_Y + GROUND_HEIGHT / 2, GAME_WIDTH, GROUND_HEIGHT, {
+    this.add.rectangle(RACE_WORLD_WIDTH / 2, GROUND_TOP_Y + GROUND_HEIGHT / 2, RACE_WORLD_WIDTH, GROUND_HEIGHT, 0x1e293b);
+    this.add.rectangle(RACE_WORLD_WIDTH / 2, GROUND_TOP_Y, RACE_WORLD_WIDTH, 2, 0x94a3b8);
+    this.matter.add.rectangle(RACE_WORLD_WIDTH / 2, GROUND_TOP_Y + GROUND_HEIGHT / 2, RACE_WORLD_WIDTH, GROUND_HEIGHT, {
       isStatic: true,
       label: GROUND_LABEL,
     });
@@ -149,7 +212,7 @@ export class RaceScene extends Phaser.Scene {
     const airplane = this.matter.add.image(LAUNCH_ANCHOR.x, LAUNCH_ANCHOR.y, PAPER_PLANE_TEXTURE_KEY, undefined, {
       density: 0.0012,
       friction: 0.8,
-      frictionAir: 0.012,
+      frictionAir: 0.0025,
       frictionStatic: 0.6,
       label: PAPER_PLANE_LABEL,
       restitution: 0.05,
@@ -169,6 +232,7 @@ export class RaceScene extends Phaser.Scene {
       .text(GAME_WIDTH - 76, GAME_HEIGHT - 50, FINISH_RACE_BUTTON.label, SCENE_BUTTON_STYLE)
       .setAlpha(0.45)
       .setOrigin(0.5)
+      .setScrollFactor(0)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         this.finishRace();
@@ -177,12 +241,23 @@ export class RaceScene extends Phaser.Scene {
 
   private registerInput(): void {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.hasLaunched && !this.hasLanded) {
+        this.updatePitchDirection(pointer);
+        return;
+      }
+
       this.beginDrag(pointer);
     });
     this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (this.hasLaunched && !this.hasLanded && pointer.isDown) {
+        this.updatePitchDirection(pointer);
+        return;
+      }
+
       this.updateDrag(pointer);
     });
     this.input.on('pointerup', () => {
+      this.pitchDirection = 'neutral';
       this.releaseDrag();
     });
     this.input.keyboard?.on('keydown-ENTER', () => {
@@ -190,6 +265,30 @@ export class RaceScene extends Phaser.Scene {
     });
     this.input.keyboard?.on('keydown-R', () => {
       this.scene.restart();
+    });
+    this.input.keyboard?.on('keydown-UP', () => {
+      this.pitchDirection = 'up';
+    });
+    this.input.keyboard?.on('keydown-W', () => {
+      this.pitchDirection = 'up';
+    });
+    this.input.keyboard?.on('keydown-DOWN', () => {
+      this.pitchDirection = 'down';
+    });
+    this.input.keyboard?.on('keydown-S', () => {
+      this.pitchDirection = 'down';
+    });
+    this.input.keyboard?.on('keyup-UP', () => {
+      this.pitchDirection = 'neutral';
+    });
+    this.input.keyboard?.on('keyup-W', () => {
+      this.pitchDirection = 'neutral';
+    });
+    this.input.keyboard?.on('keyup-DOWN', () => {
+      this.pitchDirection = 'neutral';
+    });
+    this.input.keyboard?.on('keyup-S', () => {
+      this.pitchDirection = 'neutral';
     });
   }
 
@@ -309,35 +408,49 @@ export class RaceScene extends Phaser.Scene {
 
     this.hasLaunched = true;
     this.flightStartTime = this.time.now;
+    this.launchStartX = this.airplane.x;
+    this.maxFlightX = this.airplane.x;
+    this.cameras.main.startFollow(this.airplane, true, 0.08, 0.08, -GAME_WIDTH * 0.18, 0);
     this.guideGraphics?.clear();
     this.trajectoryGraphics?.clear();
     this.airplane.setStatic(false);
     this.airplane.setAngularVelocity(0);
-    this.airplane.applyForce(toPhaserVector(launch.force));
+    this.airplane.applyForce(toPhaserVector({ x: launch.force.x * 3.5, y: launch.force.y * 3.5 }));
   }
 
-  private handleLanding(): void {
+  private updatePitchDirection(pointer: Phaser.Input.Pointer): void {
+    this.pitchDirection = pointer.y <= GAME_HEIGHT / 2 ? 'up' : 'down';
+  }
+
+  private handleLanding(reason: 'landed' | 'out_of_bounds' = 'landed'): void {
     if (!this.airplane || !this.statusText) {
       return;
     }
 
     this.hasLanded = true;
+    this.pitchDirection = 'neutral';
     this.airplane.setVelocity(0, 0);
     this.airplane.setAngularVelocity(0);
     this.airplane.setStatic(true);
 
-    const distance = Math.max(0, Math.round(this.airplane.x - LAUNCH_ANCHOR.x));
+    const distance = Math.max(0, Math.round(this.maxFlightX - this.launchStartX));
     const flightTimeMs = Math.max(0, Math.round(this.time.now - this.flightStartTime));
+    const score = calculateFlightScore({ distancePx: distance, flightTimeMs });
 
     this.resultData = {
       distance,
       flightTimeMs,
-      summary: 'Step 3 原型验证完成：已实现拖拽发射、轨迹预览、刚体飞行与地面碰撞停止。',
+      score: score.totalScore,
+      summary:
+        reason === 'landed'
+          ? 'Step 4 原型验证完成：已实现升阻力模拟、俯仰微调、相机跟随视差与着陆计分。'
+          : 'Step 4 原型验证完成：飞机越界后会结束本轮，并按飞行距离与滞空时间计分。',
     };
 
     this.finishButton?.setAlpha(1);
     this.statusText.setText([
-      `已着陆：飞行距离 ${distance}px · 滞空 ${(flightTimeMs / 1000).toFixed(2)}s`,
+      `${reason === 'landed' ? '已着陆' : '已越界'}：飞行距离 ${distance}px · 滞空 ${(flightTimeMs / 1000).toFixed(2)}s`,
+      `总分 ${score.totalScore}（距离 ${score.distanceScore} + 滞空 ${score.airtimeScore}）`,
       '点击“进入结算”或按 Enter 继续。',
       '按 R 可重新回到本场景起点再次测试。',
     ]);
@@ -364,6 +477,12 @@ export class RaceScene extends Phaser.Scene {
     this.isDragging = false;
     this.hasLaunched = false;
     this.hasLanded = false;
+    this.launchStartX = LAUNCH_ANCHOR.x;
+    this.maxFlightX = LAUNCH_ANCHOR.x;
+    this.pitchDirection = 'neutral';
+    this.cameras.main.stopFollow();
+    this.cameras.main.scrollX = 0;
+    this.cameras.main.scrollY = 0;
     this.airplane.setPosition(LAUNCH_ANCHOR.x, LAUNCH_ANCHOR.y);
     this.airplane.setVelocity(0, 0);
     this.airplane.setAngularVelocity(0);
@@ -374,8 +493,8 @@ export class RaceScene extends Phaser.Scene {
     this.finishButton?.setAlpha(0.45);
     this.statusText.setText([
       '将纸飞机向后拖拽蓄力，松手即可发射。',
-      '发射后会实时显示攻角与查表得到的升阻力系数。',
-      '目标：观察飞机飞行后碰地并停止。',
+      '发射后可轻触上/下半屏微调机头，并观察升力效果与相机跟随。',
+      '目标：观察飞机着陆或越界后进入计分结算。',
     ]);
   }
 }

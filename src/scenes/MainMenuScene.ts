@@ -27,7 +27,12 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.add.text(GAME_CENTER_X, GAME_CENTER_Y - 54, '主菜单', SCENE_TITLE_STYLE).setOrigin(0.5);
     this.add
-      .text(GAME_CENTER_X, GAME_CENTER_Y - 22, 'Step 2：Boot → Preload → MainMenu → Race → Result', SCENE_SUBTITLE_STYLE)
+      .text(
+        GAME_CENTER_X,
+        GAME_CENTER_Y - 22,
+        'Step 4：MainMenu → 发射 → 飞行控制 → 着陆/越界计分 → Result',
+        SCENE_SUBTITLE_STYLE,
+      )
       .setOrigin(0.5);
 
     const startButton = this.add

@@ -20,6 +20,7 @@ const RETURN_TO_MENU_BUTTON: SceneNavigationButton = {
 const DEFAULT_RESULT_DATA: ResultSceneData = {
   distance: 0,
   flightTimeMs: 0,
+  score: 0,
   summary: '尚未生成比赛结果。',
 };
 
@@ -35,7 +36,7 @@ export class ResultScene extends Phaser.Scene {
       .text(
         GAME_CENTER_X,
         GAME_CENTER_Y - 28,
-        `飞行距离 ${data.distance}m · 滞空 ${(data.flightTimeMs / 1000).toFixed(1)}s`,
+        `总分 ${data.score} · 飞行距离 ${data.distance}px · 滞空 ${(data.flightTimeMs / 1000).toFixed(1)}s`,
         SCENE_SUBTITLE_STYLE,
       )
       .setOrigin(0.5);

@@ -32,3 +32,8 @@
   - 新增 `src/utils/math.test.ts` 与 `src/systems/PhysicsSystem.test.ts`，补齐 Step 3 的 Vitest 覆盖
   - 将 `RaceScene` 升级为可拖拽发射的 Matter.js 原型场景，包含轨迹虚线预览、白色三角纸飞机、地面静态碰撞体与落地停止
   - 完成 `pnpm lint`、`pnpm test`、`pnpm test:coverage`、`pnpm build` 与 Playwright 交互截图验证
+- 项目初始化 Step 4 飞行体验与计分：
+  - 新增 `src/systems/RaceSystem.ts` 与对应单元测试，覆盖飞行计分与越界判定
+  - 扩展 `src/systems/PhysicsSystem.ts`，补充实时升阻力合力计算与飞行俯仰控制角速度逻辑
+  - 将 `RaceScene` 升级为带相机跟随、三层视差背景、上/下半屏俯仰控制、越界结束与计分结算的完整飞行原型
+  - 更新 `ResultScene` 与 `MainMenuScene` 文案，串联 Step 4 的完整比赛循环
