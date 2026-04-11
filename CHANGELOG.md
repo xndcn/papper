@@ -10,6 +10,10 @@
 - RaceScene 现在会在开局按权重选择天气预设，并在飞行阶段持续施加与稳定属性相关的风力效果，同时在 HUD 中显示天气名称与风向指示
 
 ### 新增
+- Phase 1 Step 4 构建场景与零件装配：
+  - 新增 `src/scenes/BuildScene.ts`，提供飞机选择、动态槽位、零件背包、天气预告与实时属性条预览
+  - 新增 `src/systems/BuildSystem.ts` 与对应单元测试，覆盖兼容槽位过滤、零件装卸与构建属性预览
+  - 更新 `MainMenuScene`、`RaceScene` 与场景常量，使 MainMenu → Build → Race → Result 成为新的比赛闭环，并把已装配零件与天气一并传入比赛
 - Phase 1 Step 3 基础天气系统：
   - 新增 `src/systems/WeatherSystem.ts` 与 `src/systems/WeatherSystem.test.ts`，覆盖风向向量、稳定属性减风与带 seed 的加权天气选择
   - RaceScene 接入天气数据流、风力外力与天气 HUD，按 `R` 重开时会保留当前飞机与天气配置

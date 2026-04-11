@@ -111,9 +111,14 @@ export interface ResultSceneData {
   readonly summary: string;
 }
 
+export interface BuildSceneData {
+  readonly airplaneId?: string;
+}
+
 export interface RaceSceneData {
   readonly airplaneId?: string;
   readonly airplaneName?: string;
   readonly airplaneStats?: AirplaneStats;
+  readonly equippedParts?: readonly Part[];
   readonly weather?: Weather;
 }

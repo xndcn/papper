@@ -13,6 +13,7 @@ export const SCENE_KEYS = {
   BOOT: 'BootScene',
   PRELOAD: 'PreloadScene',
   MAIN_MENU: 'MainMenuScene',
+  BUILD: 'BuildScene',
   RACE: 'RaceScene',
   RESULT: 'ResultScene',
 } as const;
@@ -20,7 +21,8 @@ export const SCENE_KEYS = {
 export const SCENE_TRANSITIONS = {
   [SCENE_KEYS.BOOT]: [SCENE_KEYS.PRELOAD],
   [SCENE_KEYS.PRELOAD]: [SCENE_KEYS.MAIN_MENU],
-  [SCENE_KEYS.MAIN_MENU]: [SCENE_KEYS.RACE],
+  [SCENE_KEYS.MAIN_MENU]: [SCENE_KEYS.BUILD],
+  [SCENE_KEYS.BUILD]: [SCENE_KEYS.RACE],
   [SCENE_KEYS.RACE]: [SCENE_KEYS.RESULT],
   [SCENE_KEYS.RESULT]: [SCENE_KEYS.MAIN_MENU],
 } as const;
