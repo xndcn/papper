@@ -27,8 +27,8 @@ export function unequipPart(equippedParts: EquippedPartsBySlot, slot: PartSlot):
     return equippedParts;
   }
 
-  const remainingParts = { ...equippedParts };
-  delete remainingParts[slot];
+  const { [slot]: removedPart, ...remainingParts } = equippedParts;
+  void removedPart;
   return remainingParts;
 }
 
