@@ -33,11 +33,12 @@
   - [x] 着陆检测（地面碰撞 + 越界）+ 计分（距离 + 滞空时间）
   - [x] 完整比赛循环：菜单→发射→飞行→着陆→结算→菜单
   - [x] 验证：可完整游戏循环，飞行手感合理（有明显升力效果）
-- [x] **Step 5: 测试与文档**
+- [x] **Step 5: 测试、文档与 CI**
   - [x] PhysicsSystem 单元测试（Vitest，80%+ 覆盖率）
   - [x] math.ts 单元测试（Vitest，80%+ 覆盖率）
   - [x] Playwright MCP 视觉验证（全场景截图 + 交互测试）
   - [x] 更新 ROADMAP.md + CHANGELOG.md
+  - [x] GitHub Actions CI（`pnpm lint` / `pnpm test` / `pnpm test:coverage` / `pnpm build`）+ `main` 分支自动发布 GitHub Pages
   - [x] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过，`pnpm build` 成功
 
 ## Phase 1: MVP — 核心飞行体验

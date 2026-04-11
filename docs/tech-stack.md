@@ -584,34 +584,59 @@ npm install -D gh-pages
 **方案 B：GitHub Actions（推荐）**
 
 ```yaml
-# .github/workflows/deploy.yml
-name: Deploy to GitHub Pages
+# .github/workflows/ci-pages.yml
+name: CI and GitHub Pages
 
 on:
   push:
-    branches: [main]
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+  pull_request:
+  workflow_dispatch:
 
 jobs:
-  build-and-deploy:
+  verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run build
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm test:coverage
+      - run: pnpm build
+
+  deploy-pages:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: verify
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/configure-pages@v5
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec vite build --base="/${{ github.event.repository.name }}/"
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
       - uses: actions/deploy-pages@v4
 ```
+
+> 对于仓库型 GitHub Pages（如 `https://xndcn.github.io/papper/`），Vite 构建时必须提供 `--base="/<repo-name>/"`，否则静态资源路径会指向站点根目录。
 
 **优势**：免费、与代码仓库绑定、自动 CI/CD
 **劣势**：自定义域名需额外配置、无服务端重定向

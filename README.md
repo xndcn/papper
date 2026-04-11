@@ -107,6 +107,12 @@ papper/
 | [变更日志](CHANGELOG.md) | 版本变更记录 |
 | [Agent 规范](CLAUDE.md) | AI Agent 开发流程与规范 |
 
+## CI 与部署
+
+- `.github/workflows/ci-pages.yml` 会在 `push` / `pull_request` 时执行 `pnpm lint`、`pnpm test`、`pnpm test:coverage` 与 `pnpm build`
+- 当 `main` 分支有新提交时，工作流会自动使用仓库名生成 Vite `base` 路径并部署到 GitHub Pages
+- 当前仓库的 Pages 地址为：<https://xndcn.github.io/papper/>
+
 ## 贡献指南
 
 1. Fork 本项目
