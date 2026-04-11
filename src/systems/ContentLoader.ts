@@ -239,18 +239,12 @@ function parsePartialAirplaneStats(value: unknown, path: string): Partial<Airpla
   const stats = expectRecord(value, path);
   const partialStats: Partial<AirplaneStats> = {};
 
-  for (const key of Object.keys(stats)) {
+  for (const [key, statValue] of Object.entries(stats)) {
     if (!AIRPLANE_STAT_KEYS.includes(key as (typeof AIRPLANE_STAT_KEYS)[number])) {
       throw new TypeError(`${path}.${key} is not a supported airplane stat`);
     }
-  }
 
-  for (const key of AIRPLANE_STAT_KEYS) {
-    const statValue = stats[key];
-
-    if (statValue !== undefined) {
-      partialStats[key] = expectNumber(statValue, `${path}.${key}`);
-    }
+    partialStats[key as keyof AirplaneStats] = expectNumber(statValue, `${path}.${key}`);
   }
 
   return partialStats;
@@ -323,16 +317,10 @@ function createPartsBySlotMap(parts: readonly Part[]): ReadonlyMap<PartSlot, rea
   const partsBySlot = new Map<PartSlot, Part[]>(PART_SLOTS.map((slot) => [slot, []]));
 
   for (const part of parts) {
-    const slotParts = partsBySlot.get(part.slot);
-
-    if (!slotParts) {
-      throw new Error(`unsupported part slot: ${part.slot}`);
-    }
-
-    slotParts.push(part);
+    partsBySlot.get(part.slot)?.push(part);
   }
 
-  return new Map(Array.from(partsBySlot.entries(), ([slot, slotParts]) => [slot, [...slotParts] as readonly Part[]]));
+  return new Map(Array.from(partsBySlot.entries(), ([slot, slotParts]) => [slot, slotParts as readonly Part[]]));
 }
 
 function createWeatherByConditionMap(weatherPresets: readonly Weather[]): ReadonlyMap<WeatherCondition, Weather> {
