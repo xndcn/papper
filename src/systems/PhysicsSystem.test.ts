@@ -1,0 +1,51 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  calculateAngleOfAttackDegrees,
+  calculateLaunchVector,
+  getAerodynamicCoefficients,
+  predictTrajectoryPoints,
+} from '@/systems/PhysicsSystem';
+
+describe('PhysicsSystem', () => {
+  it('derives launch power, angle, and force from drag distance', () => {
+    const launch = calculateLaunchVector({
+      anchor: { x: 100, y: 120 },
+      dragPosition: { x: 10, y: 165 },
+      speedStat: 6,
+      maxDragDistance: 50,
+    });
+
+    expect(launch.power).toBe(1);
+    expect(launch.dragDistance).toBe(50);
+    expect(launch.force.x).toBeGreaterThan(0);
+    expect(launch.force.y).toBeLessThan(0);
+    expect(launch.angleRadians).toBeLessThan(0);
+  });
+
+  it('calculates angle of attack from plane heading and velocity', () => {
+    expect(calculateAngleOfAttackDegrees(Math.PI / 4, { x: 10, y: 0 })).toBeCloseTo(45);
+    expect(calculateAngleOfAttackDegrees(-Math.PI, { x: -10, y: 0 })).toBeCloseTo(0);
+    expect(calculateAngleOfAttackDegrees(1, { x: 0, y: 0 })).toBe(0);
+  });
+
+  it('interpolates aerodynamic coefficients from the lookup table', () => {
+    expect(getAerodynamicCoefficients(12)).toEqual({ lift: 1, drag: 0.06 });
+    expect(getAerodynamicCoefficients(2.5)).toEqual({ lift: 0.2, drag: 0.0225 });
+    expect(getAerodynamicCoefficients(90)).toEqual({ lift: 0.1, drag: 0.6 });
+  });
+
+  it('predicts a ballistic trajectory preview from launch force', () => {
+    const points = predictTrajectoryPoints({
+      origin: { x: 120, y: 180 },
+      launchForce: { x: 0.004, y: -0.003 },
+      steps: 4,
+      timeStep: 0.1,
+    });
+
+    expect(points).toHaveLength(4);
+    expect(points[0].x).toBeGreaterThan(120);
+    expect(points[0].y).toBeLessThan(180);
+    expect(points[3].x).toBeGreaterThan(points[1].x);
+  });
+});
