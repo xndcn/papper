@@ -41,6 +41,10 @@ const DISTANCE_SCALE = 6;
 const WIND_DISTANCE_SCALE = 30000;
 const MIN_AIRTIME_SECONDS = 0.7;
 
+/**
+ * Normalizes the content difficulty field (authored on a 1-10 scale) into a 0-1 factor
+ * that slightly nudges the AI toward sharper launch angles and stronger power values.
+ */
 function resolveDifficultyFactor(difficulty: number): number {
   return clamp((difficulty - 1) / 9, 0, 1);
 }

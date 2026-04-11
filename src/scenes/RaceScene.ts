@@ -73,6 +73,7 @@ const AI_SIMULATION_DURATION_SECONDS = 8;
 const PROGRESS_TRACK_START_X = 164;
 const PROGRESS_TRACK_END_X = GAME_WIDTH - 44;
 const PROGRESS_TRACK_Y = 82;
+const MIN_PROGRESS_DENOMINATOR = 1;
 const FLIGHT_BOUNDS = {
   minX: 0,
   maxX: RACE_WORLD_WIDTH - 28,
@@ -189,6 +190,38 @@ function rankParticipants(participants: readonly RaceParticipantResult[]): reado
   });
 }
 
+function generateRaceSummary({
+  airplaneName,
+  opponent,
+  opponentResult,
+  playerScore,
+  beatOpponent,
+  reason,
+  weather,
+}: {
+  readonly airplaneName: string;
+  readonly opponent: Opponent;
+  readonly opponentResult?: OpponentRaceResult;
+  readonly playerScore: number;
+  readonly beatOpponent: boolean;
+  readonly reason: 'landed' | 'out_of_bounds';
+  readonly weather: Weather;
+}): string {
+  if (opponentResult) {
+    if (beatOpponent) {
+      return `你以 ${playerScore} 分击败了 ${opponent.name}（${opponentResult.score} 分），${reason === 'landed' ? '成功完成落地结算。' : '虽然越界，但仍保住了领先。'}`;
+    }
+
+    return `${opponent.name} 以 ${opponentResult.score} 分领先，你获得 ${playerScore} 分。${reason === 'landed' ? '本轮已完成结算。' : '本轮因越界结束。'}`;
+  }
+
+  if (reason === 'landed') {
+    return `${airplaneName} 原型验证完成：${weather.displayName}会持续施加风力，已可观察天气对飞行距离的影响。`;
+  }
+
+  return `${airplaneName} 原型验证完成：${weather.displayName}会持续施加风力，飞机越界后会结束本轮并结算得分。`;
+}
+
 export class RaceScene extends Phaser.Scene {
   private airplane?: Phaser.Physics.Matter.Image;
   private guideGraphics?: Phaser.GameObjects.Graphics;
@@ -291,10 +324,10 @@ export class RaceScene extends Phaser.Scene {
     this.maxFlightX = Math.max(this.maxFlightX, this.airplane.x);
     const angleOfAttack = calculateAngleOfAttackDegrees(this.airplane.rotation, velocity);
     const coefficients = getAerodynamicCoefficients(angleOfAttack);
-    const playerDistance = Math.max(0, this.airplane.x - this.launchStartX);
+    const playerDistancePx = Math.max(0, this.airplane.x - this.launchStartX);
     const opponentProjectedDistance = this.resolveAnimatedOpponentDistance(this.time.now - this.flightStartTime);
 
-    this.updateProgressMarkers(playerDistance, opponentProjectedDistance);
+    this.updateProgressMarkers(playerDistancePx, opponentProjectedDistance);
 
     this.statusText.setText([
       `速度 ${speed.toFixed(2)} px/s · 攻角 ${formatSignedAngle(angleOfAttack)}`,
@@ -647,7 +680,12 @@ export class RaceScene extends Phaser.Scene {
   }
 
   private updateProgressMarkers(playerDistance: number, opponentDistance: number): void {
-    const maxDistance = Math.max(1, playerDistance, opponentDistance, this.opponentResult?.distance ?? 0);
+    const maxDistance = Math.max(
+      MIN_PROGRESS_DENOMINATOR,
+      playerDistance,
+      opponentDistance,
+      this.opponentResult?.distance ?? 0,
+    );
     const playerProgress = clamp(playerDistance / maxDistance, 0, 1);
     const opponentProgress = clamp(opponentDistance / maxDistance, 0, 1);
 
@@ -690,14 +728,15 @@ export class RaceScene extends Phaser.Scene {
       playerName: this.airplaneName,
       opponentResult: this.opponentResult,
       rankings,
-      summary:
-        hasOpponent && this.opponentResult
-          ? beatOpponent
-            ? `你以 ${score.totalScore} 分击败了 ${this.opponent.name}（${this.opponentResult.score} 分），${reason === 'landed' ? '成功完成落地结算。' : '虽然越界，但仍保住了领先。'}`
-            : `${this.opponent.name} 以 ${this.opponentResult.score} 分领先，你获得 ${score.totalScore} 分。${reason === 'landed' ? '本轮已完成结算。' : '本轮因越界结束。'}`
-          : reason === 'landed'
-            ? `${this.airplaneName} 原型验证完成：${this.weather.displayName}会持续施加风力，已可观察天气对飞行距离的影响。`
-            : `${this.airplaneName} 原型验证完成：${this.weather.displayName}会持续施加风力，飞机越界后会结束本轮并结算得分。`,
+      summary: generateRaceSummary({
+        airplaneName: this.airplaneName,
+        opponent: this.opponent,
+        opponentResult: this.opponentResult,
+        playerScore: score.totalScore,
+        beatOpponent,
+        reason,
+        weather: this.weather,
+      }),
     };
 
     this.finishButton?.setAlpha(1);

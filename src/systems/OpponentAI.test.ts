@@ -66,8 +66,8 @@ describe('OpponentAI', () => {
 
     expect(aggressive.power).toBeGreaterThan(cautious.power);
     expect(aggressive.angleDegrees).toBeLessThan(cautious.angleDegrees);
-    expect(aggressive.angleDegrees).toBeGreaterThanOrEqual(10);
-    expect(cautious.angleDegrees).toBeLessThanOrEqual(60);
+    expect(aggressive.angleDegrees).toBeGreaterThanOrEqual(16);
+    expect(cautious.angleDegrees).toBeLessThanOrEqual(52);
   });
 
   it('simulates longer and farther flights for stronger airplane stats', () => {
