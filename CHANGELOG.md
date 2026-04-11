@@ -6,8 +6,13 @@
 
 ### 变更
 - 将 Phase 1 MVP 路线图从 9 个概要条目细化为 7 个 Step（共 40+ 子任务），每个 Step 包含具体的模块/文件、验证标准和测试要求，便于 Agent 逐步执行
+- MainMenuScene 与 RaceScene 现在会通过场景 data 传递所选基础机型属性，并将速度 / 滑翔 / 稳定 / 特技 / 耐久映射到发射、阻力、俯仰与碰撞物理参数
 
 ### 新增
+- Phase 1 Step 2 飞机属性驱动物理系统：
+  - 为 `src/systems/PhysicsSystem.ts` 新增属性到发射力、阻力系数、角速度阻尼、俯仰上限、碰撞保速的映射函数
+  - 新增 `src/systems/AirplaneStatsSystem.ts` 与对应单元测试，支持基础属性与零件修正叠加并 clamp 到合法范围
+  - 为 `MainMenuScene` 增加基础机型切换入口，便于直接对比速度型与稳定型飞机的飞行手感
 - Phase 1 Step 1 数据模型与内容数据：
   - 扩展 `src/types/index.ts`，新增飞机、零件、天气与对手相关的 MVP 类型定义
   - 新增 `src/data/airplanes.json`、`src/data/parts.json`、`src/data/weather-presets.json`、`src/data/opponents.json`

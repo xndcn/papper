@@ -10,6 +10,7 @@ import {
   wrapAngleDegrees,
   type Vector2Like,
 } from '@/utils/math';
+import { MAX_STAT_VALUE, MIN_STAT_VALUE } from '@/config/constants';
 
 export interface AeroCoefficients {
   readonly lift: number;
@@ -57,8 +58,6 @@ export interface PitchControlInput {
   readonly maxAngularVelocity?: number;
 }
 
-const MIN_STAT = 1;
-const MAX_STAT = 10;
 const DEFAULT_MAX_DRAG_DISTANCE = 72;
 const BASE_LAUNCH_FORCE = 0.0015;
 const SPEED_FORCE_MULTIPLIER = 0.00045;
@@ -90,6 +89,37 @@ export const AERO_LOOKUP_TABLE: ReadonlyArray<readonly [number, AeroCoefficients
   [45, { lift: 0.1, drag: 0.6 }],
 ] as const;
 
+function resolveStatProgress(statValue: number): number {
+  return (clamp(statValue, MIN_STAT_VALUE, MAX_STAT_VALUE) - MIN_STAT_VALUE) / (MAX_STAT_VALUE - MIN_STAT_VALUE);
+}
+
+export function calculateStatBasedLaunchForce(speedStat: number, power: number, angleRadians: number): Vector2Like {
+  const clampedSpeedStat = clamp(speedStat, MIN_STAT_VALUE, MAX_STAT_VALUE);
+  const clampedPower = clamp(power, 0, 1);
+  const magnitude = (BASE_LAUNCH_FORCE + clampedSpeedStat * SPEED_FORCE_MULTIPLIER) * clampedPower;
+
+  return {
+    x: Math.cos(angleRadians) * magnitude,
+    y: Math.sin(angleRadians) * magnitude,
+  };
+}
+
+export function calculateDragCoefficient(glideStat: number): number {
+  return lerp(0.05, 0.01, resolveStatProgress(glideStat));
+}
+
+export function calculateAngularDamping(stabilityStat: number): number {
+  return lerp(0.02, 0.2, resolveStatProgress(stabilityStat));
+}
+
+export function calculateMaxTorque(trickStat: number): number {
+  return lerp(0.03, 0.09, resolveStatProgress(trickStat));
+}
+
+export function calculateCollisionRetention(durabilityStat: number): number {
+  return lerp(0.3, 0.9, resolveStatProgress(durabilityStat));
+}
+
 export function calculateLaunchVector({
   anchor,
   dragPosition,
@@ -111,14 +141,14 @@ export function calculateLaunchVector({
   }
 
   const direction = normalizeVector(rawDragVector);
-  const clampedSpeedStat = clamp(speedStat, MIN_STAT, MAX_STAT);
-  const forceMagnitude = (BASE_LAUNCH_FORCE + clampedSpeedStat * SPEED_FORCE_MULTIPLIER) * power;
+  const angleRadians = Math.atan2(direction.y, direction.x);
+  const force = calculateStatBasedLaunchForce(speedStat, power, angleRadians);
 
   return {
-    force: scaleVector(direction, forceMagnitude),
+    force,
     dragDistance,
     power,
-    angleRadians: Math.atan2(direction.y, direction.x),
+    angleRadians,
   };
 }
 

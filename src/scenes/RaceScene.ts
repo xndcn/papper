@@ -10,17 +10,23 @@ import {
   SCENE_SUBTITLE_STYLE,
   SCENE_TITLE_STYLE,
 } from '@/config/constants';
+import { calculateFinalStats } from '@/systems/AirplaneStatsSystem';
+import { getAirplanes } from '@/systems/ContentLoader';
 import {
   calculateAerodynamicForce,
   calculateAngleOfAttackDegrees,
+  calculateAngularDamping,
+  calculateCollisionRetention,
+  calculateDragCoefficient,
   calculateLaunchVector,
+  calculateMaxTorque,
   getAerodynamicCoefficients,
   predictTrajectoryPoints,
   resolvePitchControlAngularVelocity,
   type PitchControlDirection,
 } from '@/systems/PhysicsSystem';
 import { calculateFlightScore, isFlightOutOfBounds } from '@/systems/RaceSystem';
-import type { ResultSceneData, SceneNavigationButton } from '@/types';
+import type { AirplaneStats, RaceSceneData, ResultSceneData, SceneNavigationButton } from '@/types';
 import { clamp, scaleVector, subtractVectors, vectorMagnitude, type Vector2Like } from '@/utils/math';
 
 const FINISH_RACE_BUTTON: SceneNavigationButton = {
@@ -33,24 +39,55 @@ const PAPER_PLANE_LABEL = 'paper-plane';
 const GROUND_LABEL = 'ground';
 const LAUNCH_ANCHOR: Vector2Like = { x: 116, y: 178 };
 const MAX_DRAG_DISTANCE = 72;
-const PAPER_PLANE_SPEED_STAT = 6;
 const GROUND_HEIGHT = 34;
 const GROUND_TOP_Y = GAME_HEIGHT - GROUND_HEIGHT;
 const PLANE_PICK_RADIUS = 28;
 const RACE_WORLD_WIDTH = 2200;
 // Scene-level tuning is intentionally higher than PhysicsSystem defaults so Step 4 feels readable in-browser.
 const LIFT_FORCE_MULTIPLIER = 0.00009;
-const DRAG_FORCE_MULTIPLIER = 0.00002;
+const DRAG_FORCE_MULTIPLIER_SCALE = 0.00072;
 const MIN_AERODYNAMIC_SPEED = 1.4;
 const CAMERA_LERP_FACTOR = 0.08;
 const CAMERA_HORIZONTAL_OFFSET = -GAME_WIDTH * 0.18;
 const LAUNCH_FORCE_MULTIPLIER = 3.5;
+const FRICTION_AIR_SCALE = 0.1;
+const RESTITUTION_SCALE = 0.1;
 const FLIGHT_BOUNDS = {
   minX: 0,
   maxX: RACE_WORLD_WIDTH - 28,
   minY: -120,
   maxY: GAME_HEIGHT + 120,
 } as const;
+
+interface AirplanePhysicsProfile {
+  readonly dragCoefficient: number;
+  readonly angularDamping: number;
+  readonly maxTorque: number;
+  readonly collisionRetention: number;
+}
+
+const DEFAULT_AIRPLANE = getAirplanes()[0];
+
+function resolveRaceSceneData(data: RaceSceneData | undefined): Required<RaceSceneData> {
+  return {
+    airplaneId: data?.airplaneId ?? DEFAULT_AIRPLANE.id,
+    airplaneName: data?.airplaneName ?? DEFAULT_AIRPLANE.name,
+    airplaneStats: calculateFinalStats(data?.airplaneStats ?? DEFAULT_AIRPLANE.baseStats, []),
+  };
+}
+
+function createAirplanePhysicsProfile(airplaneStats: AirplaneStats): AirplanePhysicsProfile {
+  return {
+    dragCoefficient: calculateDragCoefficient(airplaneStats.glide),
+    angularDamping: calculateAngularDamping(airplaneStats.stability),
+    maxTorque: calculateMaxTorque(airplaneStats.trick),
+    collisionRetention: calculateCollisionRetention(airplaneStats.durability),
+  };
+}
+
+function formatStatsLabel(airplaneStats: AirplaneStats): string {
+  return `速度 ${airplaneStats.speed} · 滑翔 ${airplaneStats.glide} · 稳定 ${airplaneStats.stability} · 特技 ${airplaneStats.trick} · 耐久 ${airplaneStats.durability}`;
+}
 
 function hasBodyLabel(body: MatterJS.BodyType | undefined, label: string): boolean {
   return body?.label === label;
@@ -71,6 +108,9 @@ export class RaceScene extends Phaser.Scene {
   private trajectoryGraphics?: Phaser.GameObjects.Graphics;
   private statusText?: Phaser.GameObjects.Text;
   private finishButton?: Phaser.GameObjects.Text;
+  private airplaneName = DEFAULT_AIRPLANE.name;
+  private airplaneStats = DEFAULT_AIRPLANE.baseStats;
+  private airplanePhysicsProfile = createAirplanePhysicsProfile(DEFAULT_AIRPLANE.baseStats);
   private isDragging = false;
   private hasLaunched = false;
   private hasLanded = false;
@@ -89,7 +129,12 @@ export class RaceScene extends Phaser.Scene {
     super(SCENE_KEYS.RACE);
   }
 
-  create(): void {
+  create(data?: RaceSceneData): void {
+    const raceSceneData = resolveRaceSceneData(data);
+
+    this.airplaneName = raceSceneData.airplaneName;
+    this.airplaneStats = raceSceneData.airplaneStats;
+    this.airplanePhysicsProfile = createAirplanePhysicsProfile(raceSceneData.airplaneStats);
     this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
     this.cameras.main.setBounds(0, 0, RACE_WORLD_WIDTH, GAME_HEIGHT);
     this.createParallaxBackground();
@@ -120,15 +165,16 @@ export class RaceScene extends Phaser.Scene {
       airplaneAngleRadians: this.airplane.rotation,
       velocity,
       liftMultiplier: LIFT_FORCE_MULTIPLIER,
-      dragMultiplier: DRAG_FORCE_MULTIPLIER,
+      dragMultiplier: this.airplanePhysicsProfile.dragCoefficient * DRAG_FORCE_MULTIPLIER_SCALE,
       minSpeed: MIN_AERODYNAMIC_SPEED,
     });
 
     this.airplane.applyForce(toPhaserVector(aerodynamicForce));
     this.airplane.setAngularVelocity(
       resolvePitchControlAngularVelocity({
-        currentAngularVelocity,
+        currentAngularVelocity: currentAngularVelocity * (1 - this.airplanePhysicsProfile.angularDamping),
         direction: this.pitchDirection,
+        maxAngularVelocity: this.airplanePhysicsProfile.maxTorque,
       }),
     );
 
@@ -150,18 +196,18 @@ export class RaceScene extends Phaser.Scene {
   }
 
   private createRaceHud(): void {
-    this.add.text(GAME_WIDTH / 2, 26, '飞行体验测试场', SCENE_TITLE_STYLE).setOrigin(0.5).setScrollFactor(0);
+    this.add.text(GAME_WIDTH / 2, 26, `${this.airplaneName} · 飞行测试场`, SCENE_TITLE_STYLE).setOrigin(0.5).setScrollFactor(0);
     this.add
       .text(
         GAME_WIDTH / 2,
         48,
-        'Step 4：升阻力 + 俯仰控制 + 相机跟随视差 + 着陆/越界计分',
+        'Phase 1 · Step 2：属性映射发射力、阻力、稳定性与俯仰操控',
         SCENE_SUBTITLE_STYLE,
       )
       .setOrigin(0.5)
       .setScrollFactor(0);
     this.add
-      .text(24, GAME_HEIGHT - 18, '拖拽发射后，轻触上/下半屏微调机头；按 R 可重置本次尝试。', SCENE_HINT_STYLE)
+      .text(24, GAME_HEIGHT - 18, `${formatStatsLabel(this.airplaneStats)}；按 R 可重置本次尝试。`, SCENE_HINT_STYLE)
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
   }
@@ -219,10 +265,10 @@ export class RaceScene extends Phaser.Scene {
     const airplane = this.matter.add.image(LAUNCH_ANCHOR.x, LAUNCH_ANCHOR.y, PAPER_PLANE_TEXTURE_KEY, undefined, {
       density: 0.0012,
       friction: 0.8,
-      frictionAir: 0.0025,
+      frictionAir: this.airplanePhysicsProfile.dragCoefficient * FRICTION_AIR_SCALE,
       frictionStatic: 0.6,
       label: PAPER_PLANE_LABEL,
-      restitution: 0.05,
+      restitution: this.airplanePhysicsProfile.collisionRetention * RESTITUTION_SCALE,
       shape: {
         type: 'fromVertices',
         verts: '2 12 34 2 34 22',
@@ -333,7 +379,7 @@ export class RaceScene extends Phaser.Scene {
       anchor: LAUNCH_ANCHOR,
       dragPosition,
       maxDragDistance: MAX_DRAG_DISTANCE,
-      speedStat: PAPER_PLANE_SPEED_STAT,
+      speedStat: this.airplaneStats.speed,
     });
 
     this.airplane.setPosition(dragPosition.x, dragPosition.y);
@@ -394,7 +440,7 @@ export class RaceScene extends Phaser.Scene {
       anchor: LAUNCH_ANCHOR,
       dragPosition: { x: this.airplane.x, y: this.airplane.y },
       maxDragDistance: MAX_DRAG_DISTANCE,
-      speedStat: PAPER_PLANE_SPEED_STAT,
+      speedStat: this.airplaneStats.speed,
     });
 
     if (launch.power <= 0.05) {
@@ -446,8 +492,8 @@ export class RaceScene extends Phaser.Scene {
       score: score.totalScore,
       summary:
         reason === 'landed'
-          ? 'Step 4 原型验证完成：已实现升阻力模拟、俯仰微调、相机跟随视差与着陆计分。'
-          : 'Step 4 原型验证完成：飞机越界后会结束本轮，并按飞行距离与滞空时间计分。',
+          ? `${this.airplaneName} 原型验证完成：已接入属性驱动的发射力、阻力、稳定性与俯仰操控。`
+          : `${this.airplaneName} 原型验证完成：飞机越界后会结束本轮，并按飞行距离与滞空时间计分。`,
     };
 
     this.finishButton?.setAlpha(1);

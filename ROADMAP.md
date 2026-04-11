@@ -60,18 +60,18 @@
   - [x] 单元测试：ContentLoader 查询接口 + 数据 schema 校验（确保 JSON 与 TypeScript 类型一致）
   - [x] 验证：`pnpm test:coverage` 通过，`pnpm lint` 通过，所有数据正确加载
 
-- [ ] **Step 2: 飞机属性驱动物理系统**
-  - [ ] 扩展 `src/systems/PhysicsSystem.ts`：新增 AirplaneStats → 物理参数的映射函数族（所有函数参数范围 1-10，返回 number）
+- [x] **Step 2: 飞机属性驱动物理系统**
+  - [x] 扩展 `src/systems/PhysicsSystem.ts`：新增 AirplaneStats → 物理参数的映射函数族（所有函数参数范围 1-10，返回 number）
     - `calculateStatBasedLaunchForce(speedStat, power, angle) → Vector2Like` — Speed 属性影响发射力大小
     - `calculateDragCoefficient(glideStat) → number` — Glide 属性影响空气阻力（高滑翔 → 低阻力 0.01，低滑翔 → 高阻力 0.05）
     - `calculateAngularDamping(stabilityStat) → number` — Stability 属性影响角速度阻尼（高稳定 → 高阻尼 0.2）
     - `calculateMaxTorque(trickStat) → number` — Trick 属性影响俯仰操控上限
     - `calculateCollisionRetention(durabilityStat) → number` — Durability 属性影响碰撞后速度保留比（0.3~0.9）
-  - [ ] 创建 `src/systems/AirplaneStatsSystem.ts`：零件加成计算模块
+  - [x] 创建 `src/systems/AirplaneStatsSystem.ts`：零件加成计算模块
     - `calculateFinalStats(baseStats, equippedParts) → AirplaneStats` — 基础属性 + 零件修正 = 最终属性（每项 clamp 到 `MIN_STAT_VALUE`~`MAX_STAT_VALUE`，定义在 constants.ts）
-  - [ ] 更新 RaceScene：通过场景 data 接收飞机配置（AirplaneStats），将属性应用到物理参数（替换当前硬编码常量）
-  - [ ] 单元测试：属性映射函数边界值 + AirplaneStatsSystem 加成计算
-  - [ ] 验证：选择不同飞机（速度型 vs 稳定型）时飞行手感有明显差异
+  - [x] 更新 RaceScene：通过场景 data 接收飞机配置（AirplaneStats），将属性应用到物理参数（替换当前硬编码常量）
+  - [x] 单元测试：属性映射函数边界值 + AirplaneStatsSystem 加成计算
+  - [x] 验证：选择不同飞机（速度型 vs 稳定型）时飞行手感有明显差异
 
 - [ ] **Step 3: 基础天气系统**
   - [ ] 创建 `src/systems/WeatherSystem.ts`：天气纯逻辑模块

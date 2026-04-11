@@ -3,7 +3,12 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateAngleOfAttackDegrees,
   calculateAerodynamicForce,
+  calculateAngularDamping,
+  calculateCollisionRetention,
+  calculateDragCoefficient,
   calculateLaunchVector,
+  calculateMaxTorque,
+  calculateStatBasedLaunchForce,
   getAerodynamicCoefficients,
   predictTrajectoryPoints,
   resolvePitchControlAngularVelocity,
@@ -72,5 +77,19 @@ describe('PhysicsSystem', () => {
         maxAngularVelocity: 0.06,
       }),
     ).toBe(0.06);
+  });
+
+  it('maps airplane stats into physical tuning values', () => {
+    const slowLaunchForce = calculateStatBasedLaunchForce(1, 1, 0);
+    const fastLaunchForce = calculateStatBasedLaunchForce(10, 1, 0);
+
+    expect(fastLaunchForce.x).toBeGreaterThan(slowLaunchForce.x);
+    expect(calculateDragCoefficient(1)).toBeCloseTo(0.05);
+    expect(calculateDragCoefficient(10)).toBeCloseTo(0.01);
+    expect(calculateAngularDamping(1)).toBeLessThan(calculateAngularDamping(10));
+    expect(calculateAngularDamping(10)).toBeCloseTo(0.2);
+    expect(calculateMaxTorque(10)).toBeGreaterThan(calculateMaxTorque(1));
+    expect(calculateCollisionRetention(1)).toBeCloseTo(0.3);
+    expect(calculateCollisionRetention(10)).toBeCloseTo(0.9);
   });
 });
