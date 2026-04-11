@@ -248,6 +248,7 @@ export function resolveGlideAlignmentRotation({
   const speed = vectorMagnitude(velocity);
 
   if (speed <= minSpeed || deltaMs <= 0) {
+    // Skip auto-alignment when frame timing is invalid or the airplane is effectively stationary.
     return currentRotationRadians;
   }
 

@@ -303,6 +303,7 @@ export class RaceScene extends Phaser.Scene {
 
     const velocity = this.airplane.body?.velocity ?? { x: 0, y: 0 };
     const currentAngularVelocity = this.airplane.body?.angularVelocity ?? 0;
+    const dampedAngularVelocity = currentAngularVelocity * (1 - this.airplanePhysicsProfile.angularDamping);
     let airplaneAngleRadians = this.airplane.rotation;
 
     if (this.pitchDirection === 'neutral') {
@@ -313,11 +314,11 @@ export class RaceScene extends Phaser.Scene {
         deltaMs: delta,
       });
       this.airplane.setRotation(airplaneAngleRadians);
-      this.airplane.setAngularVelocity(currentAngularVelocity * (1 - this.airplanePhysicsProfile.angularDamping));
+      this.airplane.setAngularVelocity(dampedAngularVelocity);
     } else {
       this.airplane.setAngularVelocity(
         resolvePitchControlAngularVelocity({
-          currentAngularVelocity: currentAngularVelocity * (1 - this.airplanePhysicsProfile.angularDamping),
+          currentAngularVelocity: dampedAngularVelocity,
           direction: this.pitchDirection,
           maxAngularVelocity: this.airplanePhysicsProfile.maxTorque,
         }),
