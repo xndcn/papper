@@ -145,10 +145,23 @@ describe('SkillSystem', () => {
       createBuff({
         id: 'template-buff',
       }),
+      createBuff({
+        id: 'instant-buff',
+        duration: 0,
+        startTime: 1000,
+      }),
     ];
 
-    expect(getActiveBuffs(buffs, 1500).map((buff) => buff.id)).toEqual(['active-buff', 'template-buff']);
-    expect(removeExpiredBuffs(buffs, 1500).map((buff) => buff.id)).toEqual(['active-buff', 'template-buff']);
+    expect(getActiveBuffs(buffs, 1500).map((buff) => buff.id)).toEqual([
+      'active-buff',
+      'template-buff',
+      'instant-buff',
+    ]);
+    expect(removeExpiredBuffs(buffs, 1500).map((buff) => buff.id)).toEqual([
+      'active-buff',
+      'template-buff',
+      'instant-buff',
+    ]);
   });
 
   it('resolves non-stackable conflicts before calculating final buffed stats', () => {

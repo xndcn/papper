@@ -139,6 +139,10 @@ function isBuffExpired(buff: Buff, currentTime: number): boolean {
     return false;
   }
 
+  if (buff.duration <= 0) {
+    return false;
+  }
+
   return currentTime >= buff.startTime + buff.duration;
 }
 
@@ -161,7 +165,8 @@ function getConflictGroupKey(buff: Buff): string {
 }
 
 function compareBuffPriority(nextBuff: Buff, currentBuff: Buff): number {
-  // 非叠加 Buff 冲突时，按“总修正值更高 → 持续时间更长 → id 字典序更大”依次取优。
+  // 返回值 > 0 表示 nextBuff 优先级更高；< 0 表示 currentBuff 更高；= 0 表示两者等价。
+  // 非叠加 Buff 冲突时，按“总修正值更高 → 持续时间更长 → id 字典序更大”比较。
   const modifierDifference = getBuffModifierScore(nextBuff) - getBuffModifierScore(currentBuff);
   if (modifierDifference !== 0) {
     return modifierDifference;
@@ -176,5 +181,6 @@ function compareBuffPriority(nextBuff: Buff, currentBuff: Buff): number {
 }
 
 function getBuffModifierScore(buff: Buff): number {
+  // 这里使用有符号总和来贴合“取最高值”的规则：同类冲突时，正向增益会优先于负向减益。
   return AIRPLANE_STAT_KEYS.reduce((score, statKey) => score + (buff.statModifiers[statKey] ?? 0), 0);
 }
