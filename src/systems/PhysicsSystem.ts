@@ -166,12 +166,12 @@ export function calculateAerodynamicForce({
   const normalizedVelocity = normalizeVector(velocity);
   const angleOfAttack = calculateAngleOfAttackDegrees(airplaneAngleRadians, velocity);
   const coefficients = getAerodynamicCoefficients(angleOfAttack);
-  const liftDirection = { x: normalizedVelocity.y, y: -normalizedVelocity.x };
+  const perpendicularLiftDirection = { x: normalizedVelocity.y, y: -normalizedVelocity.x };
   const dragDirection = scaleVector(normalizedVelocity, -1);
   const speedSquared = speed * speed;
 
   return addVectors(
-    scaleVector(liftDirection, coefficients.lift * liftMultiplier * speedSquared),
+    scaleVector(perpendicularLiftDirection, coefficients.lift * liftMultiplier * speedSquared),
     scaleVector(dragDirection, coefficients.drag * dragMultiplier * speedSquared),
   );
 }

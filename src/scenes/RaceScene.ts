@@ -38,6 +38,12 @@ const GROUND_HEIGHT = 34;
 const GROUND_TOP_Y = GAME_HEIGHT - GROUND_HEIGHT;
 const PLANE_PICK_RADIUS = 28;
 const RACE_WORLD_WIDTH = 2200;
+const LIFT_FORCE_MULTIPLIER = 0.00009;
+const DRAG_FORCE_MULTIPLIER = 0.00002;
+const MIN_AERODYNAMIC_SPEED = 1.4;
+const CAMERA_LERP_FACTOR = 0.08;
+const CAMERA_HORIZONTAL_OFFSET = -GAME_WIDTH * 0.18;
+const LAUNCH_FORCE_MULTIPLIER = 3.5;
 const FLIGHT_BOUNDS = {
   minX: 0,
   maxX: RACE_WORLD_WIDTH - 28,
@@ -112,9 +118,9 @@ export class RaceScene extends Phaser.Scene {
     const aerodynamicForce = calculateAerodynamicForce({
       airplaneAngleRadians: this.airplane.rotation,
       velocity,
-      liftMultiplier: 0.00009,
-      dragMultiplier: 0.00002,
-      minSpeed: 1.4,
+      liftMultiplier: LIFT_FORCE_MULTIPLIER,
+      dragMultiplier: DRAG_FORCE_MULTIPLIER,
+      minSpeed: MIN_AERODYNAMIC_SPEED,
     });
 
     this.airplane.applyForce(toPhaserVector(aerodynamicForce));
@@ -410,12 +416,24 @@ export class RaceScene extends Phaser.Scene {
     this.flightStartTime = this.time.now;
     this.launchStartX = this.airplane.x;
     this.maxFlightX = this.airplane.x;
-    this.cameras.main.startFollow(this.airplane, true, 0.08, 0.08, -GAME_WIDTH * 0.18, 0);
+    this.cameras.main.startFollow(
+      this.airplane,
+      true,
+      CAMERA_LERP_FACTOR,
+      CAMERA_LERP_FACTOR,
+      CAMERA_HORIZONTAL_OFFSET,
+      0,
+    );
     this.guideGraphics?.clear();
     this.trajectoryGraphics?.clear();
     this.airplane.setStatic(false);
     this.airplane.setAngularVelocity(0);
-    this.airplane.applyForce(toPhaserVector({ x: launch.force.x * 3.5, y: launch.force.y * 3.5 }));
+    this.airplane.applyForce(
+      toPhaserVector({
+        x: launch.force.x * LAUNCH_FORCE_MULTIPLIER,
+        y: launch.force.y * LAUNCH_FORCE_MULTIPLIER,
+      }),
+    );
   }
 
   private updatePitchDirection(pointer: Phaser.Input.Pointer): void {
