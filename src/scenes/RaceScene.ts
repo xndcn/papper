@@ -75,6 +75,12 @@ const PROGRESS_TRACK_START_X = 164;
 const PROGRESS_TRACK_END_X = GAME_WIDTH - 44;
 const PROGRESS_TRACK_Y = 82;
 const MIN_PROGRESS_DENOMINATOR = 1;
+const SPEED_GAUGE_X = GAME_WIDTH - 120;
+const SPEED_GAUGE_Y = 118;
+const SPEED_GAUGE_WIDTH = 96;
+const SPEED_GAUGE_HEIGHT = 8;
+const SPEED_GAUGE_MAX_SPEED = 320;
+const SPEED_GAUGE_REDRAW_THRESHOLD = 1;
 const FLIGHT_BOUNDS = {
   minX: 0,
   maxX: RACE_WORLD_WIDTH - 28,
@@ -239,6 +245,7 @@ export class RaceScene extends Phaser.Scene {
   private flightStartTime = 0;
   private launchStartX = LAUNCH_ANCHOR.x;
   private maxFlightX = LAUNCH_ANCHOR.x;
+  private lastRenderedSpeed = -1;
   private pitchDirection: PitchControlDirection = 'neutral';
   private resultData: ResultSceneData = {
     distance: 0,
@@ -406,20 +413,26 @@ export class RaceScene extends Phaser.Scene {
   }
 
   private renderSpeedGauge(speed: number): void {
-    const gaugeX = GAME_WIDTH - 120;
-    const gaugeY = 118;
-    const gaugeWidth = 96;
-    const gaugeHeight = 8;
-    const normalizedSpeed = clamp(speed / 320, 0, 1);
+    if (Math.abs(speed - this.lastRenderedSpeed) < SPEED_GAUGE_REDRAW_THRESHOLD) {
+      return;
+    }
+
+    const normalizedSpeed = clamp(speed / SPEED_GAUGE_MAX_SPEED, 0, 1);
 
     this.speedGaugeGraphics?.clear();
     this.speedGaugeGraphics?.fillStyle(0x1e293b, 1);
-    this.speedGaugeGraphics?.fillRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight);
+    this.speedGaugeGraphics?.fillRect(SPEED_GAUGE_X, SPEED_GAUGE_Y, SPEED_GAUGE_WIDTH, SPEED_GAUGE_HEIGHT);
     this.speedGaugeGraphics?.fillStyle(0x38bdf8, 1);
-    this.speedGaugeGraphics?.fillRect(gaugeX, gaugeY, gaugeWidth * normalizedSpeed, gaugeHeight);
+    this.speedGaugeGraphics?.fillRect(
+      SPEED_GAUGE_X,
+      SPEED_GAUGE_Y,
+      SPEED_GAUGE_WIDTH * normalizedSpeed,
+      SPEED_GAUGE_HEIGHT,
+    );
     this.speedGaugeGraphics?.lineStyle(1, 0xe2e8f0, 0.85);
-    this.speedGaugeGraphics?.strokeRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight);
+    this.speedGaugeGraphics?.strokeRect(SPEED_GAUGE_X, SPEED_GAUGE_Y, SPEED_GAUGE_WIDTH, SPEED_GAUGE_HEIGHT);
     this.speedGaugeLabelText?.setText(`速度仪表 ${Math.round(speed)} px/s`);
+    this.lastRenderedSpeed = speed;
   }
 
   private createParallaxBackground(): void {
@@ -828,6 +841,7 @@ export class RaceScene extends Phaser.Scene {
     this.trajectoryGraphics?.clear();
     this.finishButton?.setAlpha(0.45);
     this.updateProgressMarkers(0, 0);
+    this.lastRenderedSpeed = -1;
     this.statusText.setText([
       '将纸飞机向后拖拽蓄力，松手即可发射。',
       `对手 ${this.opponent.name}（${formatOpponentPersonality(this.opponent.personality)}）会同步起飞并给出预估成绩。`,

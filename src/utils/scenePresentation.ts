@@ -1,4 +1,5 @@
-import { vectorMagnitude, type Vector2Like } from '@/utils/math';
+import type { Weather } from '@/types';
+import { vectorMagnitude } from '@/utils/math';
 
 export interface PreloadJsonAsset {
   readonly key: string;
@@ -23,19 +24,14 @@ export function formatRelativeRacePosition(playerDistancePx: number, opponentDis
   return distanceDelta > 0 ? `相对位置：领先 ${distanceDelta}px` : `相对位置：落后 ${Math.abs(distanceDelta)}px`;
 }
 
-export function getWindDirectionArrow({
-  windDirection,
-  windStrength,
-}: {
-  readonly windDirection: Vector2Like;
-  readonly windStrength: number;
-}): string {
+export function getWindDirectionArrow({ windDirection, windStrength }: Pick<Weather, 'windDirection' | 'windStrength'>): string {
   if (windStrength <= 0 || vectorMagnitude(windDirection) === 0) {
     return '·';
   }
 
   const arrowBySector = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'] as const;
   const angle = Math.atan2(windDirection.y, windDirection.x);
+  // Shift negative turns into the [0, 1) range before mapping the normalized angle to 8 arrow sectors.
   const normalizedTurns = ((angle / (Math.PI * 2)) + 1) % 1;
   const sectorIndex = Math.round(normalizedTurns * arrowBySector.length) % arrowBySector.length;
 

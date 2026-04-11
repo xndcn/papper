@@ -11,6 +11,8 @@ import {
 } from '@/utils/gameSettings';
 import { CORE_SCENES } from '@/scenes';
 
+const FONT_LOAD_TIMEOUT_MS = 2000;
+
 declare global {
   interface Window {
     __PAPER_GAME__?: Phaser.Game;
@@ -26,7 +28,16 @@ async function waitForSceneFont(): Promise<void> {
     return;
   }
 
-  await document.fonts.load(`16px ${JSON.stringify('Noto Sans SC')}`);
+  try {
+    await Promise.race([
+      document.fonts.load(`16px "Noto Sans SC"`),
+      new Promise((resolve) => {
+        window.setTimeout(resolve, FONT_LOAD_TIMEOUT_MS);
+      }),
+    ]);
+  } catch {
+    // Fall back to system fonts if the bundled web font fails to initialize.
+  }
 }
 
 function createGame(): Phaser.Game {
