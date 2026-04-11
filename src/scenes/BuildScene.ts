@@ -178,7 +178,12 @@ export class BuildScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanupKeyboardListeners);
 
     this.add
-      .text(GAME_WIDTH / 2, 262, '点击零件装入对应槽位；点击槽位条目可卸载零件；Enter 出战，Esc 返回', SCENE_HINT_STYLE)
+      .text(
+        GAME_WIDTH / 2,
+        262,
+        '移动端可直接点选机型、零件与“出战”；桌面端也可用 Enter 出战、Esc 返回',
+        SCENE_HINT_STYLE,
+      )
       .setOrigin(0.5, 1);
 
     this.refreshBuildView();

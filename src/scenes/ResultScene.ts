@@ -122,7 +122,9 @@ export class ResultScene extends Phaser.Scene {
       .text(
         GAME_CENTER_X,
         GAME_CENTER_Y + 128,
-        data.replayData ? 'Enter 再来一局，Esc 返回主菜单，也可直接点击按钮' : '当前结果不可重赛，Esc 或点击“返回菜单”回到主菜单',
+        data.replayData
+          ? '点击按钮继续；移动端可直接轻触，桌面端也可用 Enter / Esc'
+          : '当前结果不可重赛，请点击“返回菜单”继续；桌面端也可按 Esc',
         SCENE_HINT_STYLE,
       )
       .setOrigin(0.5);

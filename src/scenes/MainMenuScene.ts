@@ -92,7 +92,12 @@ export class MainMenuScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanupKeyboardListeners);
 
     this.add
-      .text(GAME_CENTER_X, GAME_CENTER_Y + 112, '点击箭头或按 ← / → 切换飞机，点击“开始比赛”或按 Enter 进入构建', SCENE_HINT_STYLE)
+      .text(
+        GAME_CENTER_X,
+        GAME_CENTER_Y + 112,
+        '移动端可直接点击箭头与“开始比赛”；桌面端也可用 ← / → / Enter 快速操作',
+        SCENE_HINT_STYLE,
+      )
       .setOrigin(0.5);
 
     this.refreshSelection();

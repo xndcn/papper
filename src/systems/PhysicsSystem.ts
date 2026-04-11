@@ -58,6 +58,16 @@ export interface PitchControlInput {
   readonly maxAngularVelocity?: number;
 }
 
+export interface GlideAlignmentInput {
+  readonly currentRotationRadians: number;
+  readonly velocity: Vector2Like;
+  readonly stabilityStat: number;
+  readonly deltaMs: number;
+  readonly minSpeed?: number;
+  readonly minTurnRateRadiansPerSecond?: number;
+  readonly maxTurnRateRadiansPerSecond?: number;
+}
+
 const DEFAULT_MAX_DRAG_DISTANCE = 72;
 const BASE_LAUNCH_FORCE = 0.0015;
 const SPEED_FORCE_MULTIPLIER = 0.00045;
@@ -75,6 +85,9 @@ const DEFAULT_DRAG_MULTIPLIER = 0.000025;
 // Per-frame angular velocity adjustment applied by pitch control input.
 const DEFAULT_PITCH_STEP = 0.004;
 const DEFAULT_MAX_ANGULAR_VELOCITY = 0.06;
+const DEFAULT_GLIDE_ALIGNMENT_MIN_SPEED = 0.4;
+const DEFAULT_GLIDE_ALIGNMENT_MIN_TURN_RATE = 1.8;
+const DEFAULT_GLIDE_ALIGNMENT_MAX_TURN_RATE = 4.2;
 
 export const AERO_LOOKUP_TABLE: ReadonlyArray<readonly [number, AeroCoefficients]> = [
   [-10, { lift: -0.4, drag: 0.04 }],
@@ -221,6 +234,38 @@ export function resolvePitchControlAngularVelocity({
 
   const delta = direction === 'up' ? -step : step;
   return clamp(currentAngularVelocity + delta, -maxAngularVelocity, maxAngularVelocity);
+}
+
+export function resolveGlideAlignmentRotation({
+  currentRotationRadians,
+  velocity,
+  stabilityStat,
+  deltaMs,
+  minSpeed = DEFAULT_GLIDE_ALIGNMENT_MIN_SPEED,
+  minTurnRateRadiansPerSecond = DEFAULT_GLIDE_ALIGNMENT_MIN_TURN_RATE,
+  maxTurnRateRadiansPerSecond = DEFAULT_GLIDE_ALIGNMENT_MAX_TURN_RATE,
+}: GlideAlignmentInput): number {
+  const speed = vectorMagnitude(velocity);
+
+  if (speed <= minSpeed || deltaMs <= 0) {
+    // Skip auto-alignment when frame timing is invalid, paused, or the airplane is effectively stationary.
+    return currentRotationRadians;
+  }
+
+  const targetRotationRadians = Math.atan2(velocity.y, velocity.x);
+  const shortestAngleDelta = Math.atan2(
+    Math.sin(targetRotationRadians - currentRotationRadians),
+    Math.cos(targetRotationRadians - currentRotationRadians),
+  );
+  const maxTurnStep =
+    lerp(
+      minTurnRateRadiansPerSecond,
+      maxTurnRateRadiansPerSecond,
+      resolveStatProgress(stabilityStat),
+    ) *
+    (deltaMs / 1000);
+
+  return currentRotationRadians + clamp(shortestAngleDelta, -maxTurnStep, maxTurnStep);
 }
 
 export function predictTrajectoryPoints({
