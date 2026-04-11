@@ -127,17 +127,17 @@
 > 将 Roguelike 循环拆解为 8 个 Step，逐步引入技能/Buff 系统、锦标赛路径地图、
 > IndexedDB 存档、Meta 进度和馆主对手，最终形成可玩的多场比赛 Roguelike Run 闭环。
 
-- [ ] **Step 1: 技能与Buff数据模型与内容数据**
-  - [ ] 扩展 `src/types/index.ts`：新增 Phase 2 所需类型定义（参照 architecture.md「数据模型设计」章节）
-    - 技能相关：SkillType、TriggerType、SkillEffect、Skill
-    - Buff 相关：Buff
-    - 锦标赛相关：TournamentNodeType、TournamentNode、TournamentMap、TournamentRun、Reward、EventData
-    - 存档相关：PlayerProfile、StoryProgress、MetaProgress、GameSettings、SaveData
-  - [ ] 创建 `src/data/skills.json`：3 种基础主动技能数据（加速冲刺 active / 急转弯 active / 护盾 active）+ 2 种被动技能（逆风飞翔 passive / 凤凰涅槃 passive），含效果类型、冷却时间、触发条件、技能描述
-  - [ ] 创建 `src/data/buffs.json`：6 种被动 Buff 数据（风之祝福 / 纸甲 / 轻盈之体 / 精准投掷 / 最后冲刺 / 折纸之魂），含 Buff 效果、持续时间、稀有度和叠加规则
-  - [ ] 扩展 `src/systems/ContentLoader.ts`：新增 `getSkills()` / `getSkillById(id)` / `getSkillsByType(type)` / `getBuffs()` / `getBuffById(id)` 等类型安全的查询接口
-  - [ ] 单元测试：ContentLoader 新增查询接口 + skills/buffs 数据 schema 校验
-  - [ ] 验证：`pnpm test:coverage` 通过，`pnpm lint` 通过，所有技能和 Buff 数据正确加载
+- [x] **Step 1: 技能与Buff数据模型与内容数据**
+  - [x] 扩展 `src/types/index.ts`：新增 Phase 2 所需类型定义（参照 architecture.md「数据模型设计」章节）
+    - [x] 技能相关：SkillType、TriggerType、SkillEffect、Skill
+    - [x] Buff 相关：Buff
+    - [x] 锦标赛相关：TournamentNodeType、TournamentNode、TournamentMap、TournamentRun、Reward、EventData
+    - [x] 存档相关：PlayerProfile、StoryProgress、MetaProgress、GameSettings、SaveData
+  - [x] 创建 `src/data/skills.json`：3 种基础主动技能数据（加速冲刺 active / 急转弯 active / 护盾 active）+ 2 种被动技能（逆风飞翔 passive / 凤凰涅槃 passive），含效果类型、冷却时间、触发条件、技能描述
+  - [x] 创建 `src/data/buffs.json`：6 种被动 Buff 数据（风之祝福 / 纸甲 / 轻盈之体 / 精准投掷 / 最后冲刺 / 折纸之魂），含 Buff 效果、持续时间、稀有度和叠加规则
+  - [x] 扩展 `src/systems/ContentLoader.ts`：新增 `getSkills()` / `getSkillById(id)` / `getSkillsByType(type)` / `getBuffs()` / `getBuffById(id)` 等类型安全的查询接口
+  - [x] 单元测试：ContentLoader 新增查询接口 + skills/buffs 数据 schema 校验
+  - [x] 验证：`pnpm test:coverage` 通过，`pnpm lint` 通过，所有技能和 Buff 数据正确加载
 
 - [ ] **Step 2: SkillSystem 主动技能与Buff管理逻辑**
   - [ ] 创建 `src/systems/SkillSystem.ts`：技能与 Buff 纯逻辑模块

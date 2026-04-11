@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### 变更
+- 完成 Phase 2 Step 1：补齐技能 / Buff / 锦标赛 / 存档相关类型定义，新增技能与 Buff 内容数据，并扩展 ContentLoader 的类型安全查询与 schema 校验
 - 将 Phase 2 Roguelike 循环路线图从 7 个概要条目细化为 8 个 Step（共 70+ 子任务），每个 Step 包含具体的模块/文件、函数签名、验证标准和测试要求，便于 Agent 逐步执行
 - 完成 Phase 1 Step 7 收尾：补齐 PhysicsSystem 的自动滑翔姿态对齐测试，验证覆盖率 / lint / build，并完成 Playwright 触屏交互回归
 - RaceScene 现在在玩家松开触控后会自动顺着速度方向调整机头，并提升玩家发射力度，使单次飞行距离与滞空时间更接近 AI 对手的比赛节奏
@@ -17,6 +18,10 @@
 - 主场景现在会在中文 Web Font 加载完成后再创建 Phaser 实例，修复无中文系统字体环境下的方块字问题
 
 ### 新增
+- Phase 2 Step 1 技能与 Buff 内容层：
+  - 扩展 `src/types/index.ts`，新增 Skill / Buff、TournamentMap / TournamentRun 与 SaveData 等 Phase 2 基础类型
+  - 新增 `src/data/skills.json` 与 `src/data/buffs.json`，补齐 5 个基础技能与 6 个基础 Buff 内容数据
+  - 扩展 `src/systems/ContentLoader.ts` 与对应单元测试，支持技能 / Buff 数据加载、按 id / 类型查询与运行时 schema 校验
 - Phase 1 Step 7 测试收尾与文档更新：
   - 为 `src/systems/PhysicsSystem.ts` 新增中性飞行姿态自动对齐逻辑与对应单元测试，约束飞机会逐步朝速度方向滑翔
   - 为 RaceScene 新增触控可点的“重新试飞”入口，补齐移动端无键盘时的比赛重试路径

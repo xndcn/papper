@@ -21,6 +21,54 @@ export type PartSlot = 'nose' | 'wing' | 'tail' | 'coating' | 'weight';
 
 export type Rarity = 'common' | 'rare' | 'legendary';
 
+export type SkillType = 'active' | 'passive';
+
+export type TriggerType =
+  | 'on_launch'
+  | 'on_stall'
+  | 'on_headwind'
+  | 'on_collision'
+  | 'on_trick'
+  | 'on_low_speed'
+  | 'on_high_altitude'
+  | 'manual';
+
+export type TournamentNodeType = 'race' | 'elite' | 'shop' | 'rest' | 'event' | 'boss';
+
+export interface SkillEffect {
+  readonly type: 'stat_boost' | 'force_apply' | 'damage_reduce' | 'special';
+  readonly target: 'self' | 'opponent' | 'environment';
+  readonly value: Partial<AirplaneStats> | number;
+  readonly duration?: number;
+  readonly specialId?: string;
+}
+
+export interface Skill {
+  readonly id: string;
+  readonly name: string;
+  readonly type: SkillType;
+  readonly description: string;
+  readonly cooldown?: number;
+  readonly trigger?: TriggerType;
+  readonly effect: SkillEffect;
+  readonly iconKey: string;
+  readonly rarity: Rarity;
+}
+
+export interface Buff {
+  readonly id: string;
+  readonly name: string;
+  readonly description: string;
+  readonly duration: number;
+  readonly rarity: Rarity;
+  readonly stackable: boolean;
+  readonly iconKey: string;
+  readonly statModifiers: Partial<AirplaneStats>;
+  readonly specialEffect?: string;
+  readonly sourceSkillId?: string;
+  readonly startTime?: number;
+}
+
 export interface FoldingStep {
   readonly stepNumber: number;
   readonly instruction: string;
@@ -148,4 +196,126 @@ export interface OpponentRaceResult extends RaceParticipantResult {
 export interface ScoreBreakdown {
   readonly distanceScore: number;
   readonly airtimeScore: number;
+}
+
+export interface PlayerProfile {
+  readonly name: string;
+  readonly createdAt: number;
+  readonly totalPlayTime: number;
+  readonly totalRaces: number;
+  readonly totalWins: number;
+  readonly bestScore: number;
+  readonly longestFlight: number;
+}
+
+export interface StoryProgress {
+  readonly chapter: number;
+  readonly completedEvents: readonly string[];
+  readonly npcRelationships: Readonly<Record<string, number>>;
+  readonly unlockedLocations: readonly string[];
+  readonly completedDialogues: readonly string[];
+}
+
+export interface MetaProgress {
+  readonly level: number;
+  readonly experience: number;
+  readonly permanentUpgrades: readonly string[];
+  readonly achievements: readonly string[];
+  readonly totalRunsCompleted: number;
+  readonly bestTournamentRank: number;
+}
+
+export interface GameSettings {
+  readonly masterVolume: number;
+  readonly bgmVolume: number;
+  readonly sfxVolume: number;
+  readonly language: 'zh-CN';
+  readonly showTutorial: boolean;
+  readonly autoSave: boolean;
+  readonly accessibility: {
+    readonly highContrast: boolean;
+    readonly reducedMotion: boolean;
+    readonly largeText: boolean;
+  };
+}
+
+export interface Reward {
+  readonly type: 'part' | 'coins' | 'skill' | 'airplane_unlock';
+  readonly value: Part | number | Skill | string;
+  readonly rarity: Rarity;
+}
+
+export interface EventData {
+  readonly id: string;
+  readonly description: string;
+  readonly choices: readonly {
+    readonly text: string;
+    readonly outcome: Reward | Partial<AirplaneStats>;
+  }[];
+}
+
+export interface TournamentNode {
+  readonly id: string;
+  readonly type: TournamentNodeType;
+  readonly position: Vector2;
+  readonly connections: readonly string[];
+  readonly difficulty: number;
+  readonly rewards: readonly Reward[];
+  readonly opponent?: Opponent;
+  readonly shopInventory?: readonly Part[];
+  readonly eventData?: EventData;
+}
+
+export interface TournamentMap {
+  readonly seed: number;
+  readonly layers: readonly (readonly TournamentNode[])[];
+  readonly totalLayers: number;
+}
+
+export interface RaceResult {
+  readonly raceId: string;
+  readonly score: number;
+  readonly distance: number;
+  readonly airTime: number;
+  readonly trickScore: number;
+  readonly ranking: number;
+  readonly totalParticipants: number;
+  readonly weather: Weather;
+  readonly opponentScores: readonly { readonly opponentId: string; readonly score: number }[];
+}
+
+export interface TournamentRun {
+  readonly seed: number;
+  readonly map: TournamentMap;
+  readonly currentNodeId: string;
+  readonly visitedNodeIds: readonly string[];
+  readonly currentLayer: number;
+  readonly collectedParts: readonly Part[];
+  readonly activeBuffs: readonly Buff[];
+  readonly runCoins: number;
+  readonly runSkills: readonly Skill[];
+  readonly raceResults: readonly RaceResult[];
+  readonly startedAt: number;
+  readonly status: 'in_progress' | 'victory' | 'defeat' | 'abandoned';
+}
+
+export interface SaveData {
+  readonly version: number;
+  readonly playerProfile: PlayerProfile;
+  readonly unlockedAirplanes: readonly string[];
+  readonly inventory: readonly Part[];
+  readonly equippedLoadout: {
+    readonly airplaneId: string;
+    readonly parts: Readonly<Record<PartSlot, string | null>>;
+    readonly skills: readonly string[];
+  };
+  readonly storyProgress: StoryProgress;
+  readonly metaProgress: MetaProgress;
+  readonly currency: {
+    readonly coins: number;
+    readonly premiumTickets: number;
+  };
+  readonly settings: GameSettings;
+  readonly activeTournamentRun?: TournamentRun;
+  readonly lastSavedAt: number;
 }
