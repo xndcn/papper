@@ -64,10 +64,12 @@ export function applyBuff(buff: Buff, baseStats: AirplaneStats): AirplaneStats {
   );
 }
 
+/** 读取当前时刻仍然生效的 Buff 视图，不改变输入集合。 */
 export function getActiveBuffs(buffs: readonly Buff[], currentTime: number): Buff[] {
   return filterUnexpiredBuffs(buffs, currentTime);
 }
 
+/** 生成移除过期 Buff 后的新集合，用于回写运行时状态。 */
 export function removeExpiredBuffs(buffs: readonly Buff[], currentTime: number): Buff[] {
   return filterUnexpiredBuffs(buffs, currentTime);
 }
