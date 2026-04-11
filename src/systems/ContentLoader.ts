@@ -1,15 +1,21 @@
 import airplanesData from '@/data/airplanes.json';
+import buffsData from '@/data/buffs.json';
 import opponentsData from '@/data/opponents.json';
 import partsData from '@/data/parts.json';
+import skillsData from '@/data/skills.json';
 import weatherPresetsData from '@/data/weather-presets.json';
 import type {
   Airplane,
   AirplaneStats,
+  Buff,
   FoldingStep,
   Opponent,
   OpponentDialogues,
   Part,
   PartSlot,
+  Skill,
+  SkillEffect,
+  SkillType,
   Vector2,
   Weather,
   WeatherCondition,
@@ -19,6 +25,19 @@ import type {
 const AIRPLANE_TYPES = ['speed', 'trick', 'stability'] as const;
 const PART_SLOTS = ['nose', 'wing', 'tail', 'coating', 'weight'] as const;
 const RARITIES = ['common', 'rare', 'legendary'] as const;
+const SKILL_TYPES = ['active', 'passive'] as const;
+const TRIGGER_TYPES = [
+  'on_launch',
+  'on_stall',
+  'on_headwind',
+  'on_collision',
+  'on_trick',
+  'on_low_speed',
+  'on_high_altitude',
+  'manual',
+] as const;
+const SKILL_EFFECT_TYPES = ['stat_boost', 'force_apply', 'damage_reduce', 'special'] as const;
+const SKILL_EFFECT_TARGETS = ['self', 'opponent', 'environment'] as const;
 const WEATHER_CONDITIONS = ['tailwind', 'headwind', 'crosswind', 'storm', 'calm'] as const;
 const OPPONENT_PERSONALITIES = ['aggressive', 'balanced', 'cautious', 'tricky'] as const;
 const AIRPLANE_STAT_KEYS = ['speed', 'glide', 'stability', 'trick', 'durability'] as const;
@@ -33,6 +52,11 @@ interface ContentCache {
   readonly weatherPresetsByCondition: ReadonlyMap<WeatherCondition, Weather>;
   readonly opponents: readonly Opponent[];
   readonly opponentsById: ReadonlyMap<string, Opponent>;
+  readonly skills: readonly Skill[];
+  readonly skillsById: ReadonlyMap<string, Skill>;
+  readonly skillsByType: ReadonlyMap<SkillType, readonly Skill[]>;
+  readonly buffs: readonly Buff[];
+  readonly buffsById: ReadonlyMap<string, Buff>;
 }
 
 let contentCache: ContentCache | null = null;
@@ -59,6 +83,18 @@ export function parseOpponentsDataset(dataset: unknown): readonly Opponent[] {
   const root = expectRecord(dataset, 'opponents');
   const opponents = expectArray(root.opponents, 'opponents');
   return opponents.map((item, index) => parseOpponent(item, `opponents[${index}]`));
+}
+
+export function parseSkillsDataset(dataset: unknown): readonly Skill[] {
+  const root = expectRecord(dataset, 'skills');
+  const skills = expectArray(root.skills, 'skills');
+  return skills.map((item, index) => parseSkill(item, `skills[${index}]`));
+}
+
+export function parseBuffsDataset(dataset: unknown): readonly Buff[] {
+  const root = expectRecord(dataset, 'buffs');
+  const buffs = expectArray(root.buffs, 'buffs');
+  return buffs.map((item, index) => parseBuff(item, `buffs[${index}]`));
 }
 
 export function getAirplanes(): readonly Airplane[] {
@@ -93,6 +129,26 @@ export function getOpponentById(id: string): Opponent | undefined {
   return getContentCache().opponentsById.get(id);
 }
 
+export function getSkills(): readonly Skill[] {
+  return getContentCache().skills;
+}
+
+export function getSkillById(id: string): Skill | undefined {
+  return getContentCache().skillsById.get(id);
+}
+
+export function getSkillsByType(type: SkillType): readonly Skill[] {
+  return getContentCache().skillsByType.get(type) ?? [];
+}
+
+export function getBuffs(): readonly Buff[] {
+  return getContentCache().buffs;
+}
+
+export function getBuffById(id: string): Buff | undefined {
+  return getContentCache().buffsById.get(id);
+}
+
 export function clearContentCache(): void {
   contentCache = null;
 }
@@ -106,11 +162,16 @@ function getContentCache(): ContentCache {
   const parts = parsePartsDataset(partsData);
   const weatherPresets = parseWeatherPresetsDataset(weatherPresetsData);
   const opponents = parseOpponentsDataset(opponentsData);
+  const skills = parseSkillsDataset(skillsData);
+  const buffs = parseBuffsDataset(buffsData);
 
   const airplanesById = createIdMap(airplanes, 'airplane');
   const partsById = createIdMap(parts, 'part');
   const opponentsById = createIdMap(opponents, 'opponent');
+  const skillsById = createIdMap(skills, 'skill');
+  const buffsById = createIdMap(buffs, 'buff');
   const partsBySlot = createPartsBySlotMap(parts);
+  const skillsByType = createSkillsByTypeMap(skills);
   const weatherPresetsByCondition = createWeatherByConditionMap(weatherPresets);
 
   for (const opponent of opponents) {
@@ -134,6 +195,11 @@ function getContentCache(): ContentCache {
     weatherPresetsByCondition,
     opponents,
     opponentsById,
+    skills,
+    skillsById,
+    skillsByType,
+    buffs,
+    buffsById,
   };
 
   return contentCache;
@@ -213,6 +279,59 @@ function parseOpponent(value: unknown, path: string): Opponent {
   };
 }
 
+function parseSkill(value: unknown, path: string): Skill {
+  const skill = expectRecord(value, path);
+  const type = expectEnum(skill.type, SKILL_TYPES, `${path}.type`);
+  const cooldown = expectOptionalNumber(skill.cooldown, `${path}.cooldown`);
+  const trigger = expectOptionalEnum(skill.trigger, TRIGGER_TYPES, `${path}.trigger`);
+
+  if (type === 'active' && cooldown === undefined) {
+    throw new TypeError(`${path}.cooldown must be provided for active skills`);
+  }
+
+  if (type === 'active' && trigger !== undefined) {
+    throw new TypeError(`${path}.trigger must be omitted for active skills`);
+  }
+
+  if (type === 'passive' && trigger === undefined) {
+    throw new TypeError(`${path}.trigger must be provided for passive skills`);
+  }
+
+  if (type === 'passive' && cooldown !== undefined) {
+    throw new TypeError(`${path}.cooldown must be omitted for passive skills`);
+  }
+
+  return {
+    id: expectString(skill.id, `${path}.id`),
+    name: expectString(skill.name, `${path}.name`),
+    type,
+    description: expectString(skill.description, `${path}.description`),
+    cooldown,
+    trigger,
+    effect: parseSkillEffect(skill.effect, `${path}.effect`),
+    iconKey: expectString(skill.iconKey, `${path}.iconKey`),
+    rarity: expectEnum(skill.rarity, RARITIES, `${path}.rarity`),
+  };
+}
+
+function parseBuff(value: unknown, path: string): Buff {
+  const buff = expectRecord(value, path);
+
+  return {
+    id: expectString(buff.id, `${path}.id`),
+    name: expectString(buff.name, `${path}.name`),
+    description: expectString(buff.description, `${path}.description`),
+    duration: expectNumber(buff.duration, `${path}.duration`),
+    rarity: expectEnum(buff.rarity, RARITIES, `${path}.rarity`),
+    stackable: expectBoolean(buff.stackable, `${path}.stackable`),
+    iconKey: expectString(buff.iconKey, `${path}.iconKey`),
+    statModifiers: parsePartialAirplaneStats(buff.statModifiers, `${path}.statModifiers`),
+    specialEffect: expectOptionalString(buff.specialEffect, `${path}.specialEffect`),
+    sourceSkillId: expectOptionalString(buff.sourceSkillId, `${path}.sourceSkillId`),
+    startTime: expectOptionalNumber(buff.startTime, `${path}.startTime`),
+  };
+}
+
 function parseFoldingStep(value: unknown, path: string): FoldingStep {
   const step = expectRecord(value, path);
 
@@ -253,6 +372,35 @@ function parsePartialAirplaneStats(value: unknown, path: string): Partial<Airpla
 function parseOptionalPartialAirplaneStats(value: unknown, path: string): Partial<AirplaneStats> | undefined {
   if (value === undefined) {
     return undefined;
+  }
+
+  return parsePartialAirplaneStats(value, path);
+}
+
+function parseSkillEffect(value: unknown, path: string): SkillEffect {
+  const effect = expectRecord(value, path);
+  const type = expectEnum(effect.type, SKILL_EFFECT_TYPES, `${path}.type`);
+
+  return {
+    type,
+    target: expectEnum(effect.target, SKILL_EFFECT_TARGETS, `${path}.target`),
+    value: parseSkillEffectValue(effect.value, type, `${path}.value`),
+    duration: expectOptionalNumber(effect.duration, `${path}.duration`),
+    specialId: expectOptionalString(effect.specialId, `${path}.specialId`),
+  };
+}
+
+function parseSkillEffectValue(
+  value: unknown,
+  effectType: SkillEffect['type'],
+  path: string,
+): Partial<AirplaneStats> | number {
+  if (effectType === 'stat_boost') {
+    return parsePartialAirplaneStats(value, path);
+  }
+
+  if (typeof value === 'number') {
+    return expectNumber(value, path);
   }
 
   return parsePartialAirplaneStats(value, path);
@@ -323,6 +471,16 @@ function createPartsBySlotMap(parts: readonly Part[]): ReadonlyMap<PartSlot, rea
   return new Map(Array.from(partsBySlot.entries(), ([slot, slotParts]) => [slot, slotParts as readonly Part[]]));
 }
 
+function createSkillsByTypeMap(skills: readonly Skill[]): ReadonlyMap<SkillType, readonly Skill[]> {
+  const skillsByType = new Map<SkillType, Skill[]>(SKILL_TYPES.map((type) => [type, []]));
+
+  for (const skill of skills) {
+    skillsByType.get(skill.type)?.push(skill);
+  }
+
+  return new Map(Array.from(skillsByType.entries(), ([type, typedSkills]) => [type, typedSkills as readonly Skill[]]));
+}
+
 function createWeatherByConditionMap(weatherPresets: readonly Weather[]): ReadonlyMap<WeatherCondition, Weather> {
   const weatherByCondition = new Map<WeatherCondition, Weather>();
 
@@ -369,6 +527,14 @@ function expectOptionalString(value: unknown, path: string): string | undefined 
   return expectString(value, path);
 }
 
+function expectBoolean(value: unknown, path: string): boolean {
+  if (typeof value !== 'boolean') {
+    throw new TypeError(`${path} must be a boolean`);
+  }
+
+  return value;
+}
+
 function expectNumber(value: unknown, path: string): number {
   if (typeof value !== 'number' || Number.isNaN(value)) {
     throw new TypeError(`${path} must be a valid number`);
@@ -377,10 +543,26 @@ function expectNumber(value: unknown, path: string): number {
   return value;
 }
 
+function expectOptionalNumber(value: unknown, path: string): number | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return expectNumber(value, path);
+}
+
 function expectEnum<T extends string>(value: unknown, allowedValues: readonly T[], path: string): T {
   if (typeof value !== 'string' || !allowedValues.includes(value as T)) {
     throw new TypeError(`${path} must be one of: ${allowedValues.join(', ')}`);
   }
 
   return value as T;
+}
+
+function expectOptionalEnum<T extends string>(value: unknown, allowedValues: readonly T[], path: string): T | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return expectEnum(value, allowedValues, path);
 }

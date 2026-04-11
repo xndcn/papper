@@ -1,0 +1,87 @@
+{
+  "skills": [
+    {
+      "id": "boost_dash",
+      "name": "加速冲刺",
+      "type": "active",
+      "description": "瞬间压低机头换取爆发速度，短时间内显著提升前冲能力。",
+      "cooldown": 12000,
+      "effect": {
+        "type": "stat_boost",
+        "target": "self",
+        "value": {
+          "speed": 3,
+          "stability": -2
+        },
+        "duration": 2000
+      },
+      "iconKey": "skill_boost_dash",
+      "rarity": "common"
+    },
+    {
+      "id": "sharp_turn",
+      "name": "急转弯",
+      "type": "active",
+      "description": "瞬间重整纸翼受力，让飞机立即切入新的飞行角度。",
+      "cooldown": 8000,
+      "effect": {
+        "type": "special",
+        "target": "self",
+        "value": 45,
+        "specialId": "turn_pitch_45_degrees"
+      },
+      "iconKey": "skill_sharp_turn",
+      "rarity": "rare"
+    },
+    {
+      "id": "paper_shield",
+      "name": "护盾",
+      "type": "active",
+      "description": "展开纸面护盾，短时间内抵消一次碰撞并削弱逆风干扰。",
+      "cooldown": 18000,
+      "effect": {
+        "type": "damage_reduce",
+        "target": "self",
+        "value": 1,
+        "duration": 3000,
+        "specialId": "block_collision_and_headwind_once"
+      },
+      "iconKey": "skill_paper_shield",
+      "rarity": "rare"
+    },
+    {
+      "id": "headwind_rider",
+      "name": "逆风飞翔",
+      "type": "passive",
+      "description": "遭遇逆风时自动调整纸翼姿态，换取额外稳定与滑翔效率。",
+      "trigger": "on_headwind",
+      "effect": {
+        "type": "stat_boost",
+        "target": "self",
+        "value": {
+          "stability": 2,
+          "glide": 1
+        },
+        "duration": 5000
+      },
+      "iconKey": "skill_headwind_rider",
+      "rarity": "rare"
+    },
+    {
+      "id": "phoenix_rise",
+      "name": "凤凰涅槃",
+      "type": "passive",
+      "description": "即将失速坠落时自动触发一次向上推升，整场比赛仅生效一次。",
+      "trigger": "on_stall",
+      "effect": {
+        "type": "force_apply",
+        "target": "self",
+        "value": -0.02,
+        "duration": 1500,
+        "specialId": "phoenix_rise_once"
+      },
+      "iconKey": "skill_phoenix_rise",
+      "rarity": "legendary"
+    }
+  ]
+}

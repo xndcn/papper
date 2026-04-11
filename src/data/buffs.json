@@ -1,0 +1,85 @@
+{
+  "buffs": [
+    {
+      "id": "wind_blessing",
+      "name": "风之祝福",
+      "description": "顺风会更主动地托举纸翼，让冲刺与滑翔都更轻盈。",
+      "duration": 8000,
+      "rarity": "common",
+      "stackable": false,
+      "statModifiers": {
+        "speed": 2,
+        "glide": 1
+      },
+      "specialEffect": "tailwind_bonus_30",
+      "iconKey": "buff_wind_blessing"
+    },
+    {
+      "id": "paper_armor",
+      "name": "纸甲",
+      "description": "下一次碰撞时保住速度，不会被轻易撞散节奏。",
+      "duration": 10000,
+      "rarity": "common",
+      "stackable": false,
+      "statModifiers": {
+        "durability": 2
+      },
+      "specialEffect": "negate_collision_slowdown_once",
+      "iconKey": "buff_paper_armor"
+    },
+    {
+      "id": "featherlight_body",
+      "name": "轻盈之体",
+      "description": "机身受风面积更优，短时间内获得更强滑翔表现。",
+      "duration": 10000,
+      "rarity": "common",
+      "stackable": false,
+      "statModifiers": {
+        "glide": 2
+      },
+      "iconKey": "buff_featherlight_body"
+    },
+    {
+      "id": "precision_throw",
+      "name": "精准投掷",
+      "description": "纸翼姿态更稳定，发射后的修正窗口更宽松。",
+      "duration": 10000,
+      "rarity": "common",
+      "stackable": false,
+      "statModifiers": {
+        "stability": 2
+      },
+      "iconKey": "buff_precision_throw"
+    },
+    {
+      "id": "last_sprint",
+      "name": "最后冲刺",
+      "description": "进入赛道尾段时自动加速，帮助你完成临门一脚的超越。",
+      "duration": 6000,
+      "rarity": "rare",
+      "stackable": false,
+      "statModifiers": {
+        "speed": 3
+      },
+      "specialEffect": "final_section_speed_bonus",
+      "iconKey": "buff_last_sprint"
+    },
+    {
+      "id": "origami_spirit",
+      "name": "折纸之魂",
+      "description": "整场比赛都受到折纸之魂庇护，全属性获得大幅提升。",
+      "duration": 60000,
+      "rarity": "legendary",
+      "stackable": false,
+      "statModifiers": {
+        "speed": 8,
+        "glide": 8,
+        "stability": 8,
+        "trick": 8,
+        "durability": 8
+      },
+      "specialEffect": "full_run_blessing",
+      "iconKey": "buff_origami_spirit"
+    }
+  ]
+}
