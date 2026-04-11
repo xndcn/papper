@@ -11,6 +11,7 @@ import {
   calculateStatBasedLaunchForce,
   getAerodynamicCoefficients,
   predictTrajectoryPoints,
+  resolveGlideAlignmentRotation,
   resolvePitchControlAngularVelocity,
 } from '@/systems/PhysicsSystem';
 
@@ -77,6 +78,33 @@ describe('PhysicsSystem', () => {
         maxAngularVelocity: 0.06,
       }),
     ).toBe(0.06);
+  });
+
+  it('gradually aligns neutral flight rotation toward the velocity vector', () => {
+    const lowStabilityRotation = resolveGlideAlignmentRotation({
+      currentRotationRadians: 0,
+      velocity: { x: 6, y: 6 },
+      stabilityStat: 1,
+      deltaMs: 100,
+    });
+    const highStabilityRotation = resolveGlideAlignmentRotation({
+      currentRotationRadians: 0,
+      velocity: { x: 6, y: 6 },
+      stabilityStat: 10,
+      deltaMs: 100,
+    });
+
+    expect(lowStabilityRotation).toBeGreaterThan(0);
+    expect(highStabilityRotation).toBeGreaterThan(lowStabilityRotation);
+    expect(highStabilityRotation).toBeLessThan(Math.PI / 4);
+    expect(
+      resolveGlideAlignmentRotation({
+        currentRotationRadians: 0.4,
+        velocity: { x: 0.1, y: 0.1 },
+        stabilityStat: 10,
+        deltaMs: 100,
+      }),
+    ).toBeCloseTo(0.4);
   });
 
   it('maps airplane stats into physical tuning values', () => {

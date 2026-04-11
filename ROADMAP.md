@@ -114,12 +114,12 @@
   - [x] 触屏兼容验证：确保 BuildScene 的点击选择、RaceScene 的拖拽发射和俯仰控制在移动端触屏正常工作
   - [x] 验证：完成从 MainMenu → Build → Race → Result → MainMenu 的完整闭环，所有场景 UI 可读可操作
 
-- [ ] **Step 7: 测试收尾与文档更新**
-  - [ ] 所有新增 systems 和 utils 模块的 Vitest 单元测试覆盖率 ≥ 80%
-  - [ ] Playwright MCP 视觉验证：所有场景截图 + 关键交互流程测试（构建→发射→飞行→结算完整流程）
-  - [ ] 更新 ROADMAP.md：标记 Phase 1 各 Step 完成状态
-  - [ ] 更新 CHANGELOG.md：记录 Phase 1 所有新增功能
-  - [ ] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过，`pnpm build` 成功
+- [x] **Step 7: 测试收尾与文档更新**
+  - [x] 所有新增 systems 和 utils 模块的 Vitest 单元测试覆盖率 ≥ 80%
+  - [x] Playwright MCP 视觉验证：所有场景截图 + 关键交互流程测试（构建→发射→飞行→结算完整流程）
+  - [x] 更新 ROADMAP.md：标记 Phase 1 各 Step 完成状态
+  - [x] 更新 CHANGELOG.md：记录 Phase 1 所有新增功能
+  - [x] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过，`pnpm build` 成功
 
 ## Phase 2: Roguelike 循环
 

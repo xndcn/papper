@@ -5,6 +5,9 @@
 ## [Unreleased]
 
 ### 变更
+- 完成 Phase 1 Step 7 收尾：补齐 PhysicsSystem 的自动滑翔姿态对齐测试，验证覆盖率 / lint / build，并完成 Playwright 触屏交互回归
+- RaceScene 现在在玩家松开触控后会自动顺着速度方向调整机头，并提升玩家发射力度，使单次飞行距离与滞空时间更接近 AI 对手的比赛节奏
+- RaceScene、MainMenuScene、BuildScene 与 ResultScene 统一强化了移动端文案与触控路径提示，RaceScene 额外加入“重新试飞”按钮，移动端无需键盘即可完成完整闭环
 - 将 Phase 1 MVP 路线图从 9 个概要条目细化为 7 个 Step（共 40+ 子任务），每个 Step 包含具体的模块/文件、验证标准和测试要求，便于 Agent 逐步执行
 - MainMenuScene 与 RaceScene 现在会通过场景 data 传递所选基础机型属性，并将速度 / 滑翔 / 稳定 / 特技 / 耐久映射到发射、阻力、俯仰与碰撞物理参数
 - RaceScene 现在会在开局按权重选择天气预设，并在飞行阶段持续施加与稳定属性相关的风力效果，同时在 HUD 中显示天气名称与风向指示
@@ -13,6 +16,10 @@
 - 主场景现在会在中文 Web Font 加载完成后再创建 Phaser 实例，修复无中文系统字体环境下的方块字问题
 
 ### 新增
+- Phase 1 Step 7 测试收尾与文档更新：
+  - 为 `src/systems/PhysicsSystem.ts` 新增中性飞行姿态自动对齐逻辑与对应单元测试，约束飞机会逐步朝速度方向滑翔
+  - 为 RaceScene 新增触控可点的“重新试飞”入口，补齐移动端无键盘时的比赛重试路径
+  - 完成 Playwright 触控流程验证与结果页截图留档，确认 MainMenu → Build → Race → Result 的触控闭环可运行
 - Phase 1 Step 6 完整比赛流程与场景打磨：
   - 升级 BootScene 与 PreloadScene：增加 Logo / 标题、最小化加载动画、JSON 资源预加载、像素风进度条与加载提示文本
   - 升级 MainMenuScene：增加“纸翼传说”标题、“开始比赛”入口和纸飞机飘飞背景动画

@@ -28,6 +28,7 @@ import {
   calculateMaxTorque,
   getAerodynamicCoefficients,
   predictTrajectoryPoints,
+  resolveGlideAlignmentRotation,
   resolvePitchControlAngularVelocity,
   type PitchControlDirection,
 } from '@/systems/PhysicsSystem';
@@ -51,6 +52,10 @@ const FINISH_RACE_BUTTON: SceneNavigationButton = {
   label: '进入结算',
   target: SCENE_KEYS.RESULT,
 };
+const RESET_RACE_BUTTON: SceneNavigationButton = {
+  label: '重新试飞',
+  target: SCENE_KEYS.RACE,
+};
 
 const PAPER_PLANE_TEXTURE_KEY = 'paper-plane-step3';
 const PAPER_PLANE_LABEL = 'paper-plane';
@@ -67,7 +72,7 @@ const DRAG_FORCE_MULTIPLIER_SCALE = 0.00072;
 const MIN_AERODYNAMIC_SPEED = 1.4;
 const CAMERA_LERP_FACTOR = 0.08;
 const CAMERA_HORIZONTAL_OFFSET = -GAME_WIDTH * 0.18;
-const LAUNCH_FORCE_MULTIPLIER = 3.5;
+const LAUNCH_FORCE_MULTIPLIER = 5.5;
 const FRICTION_AIR_SCALE = 0.1;
 const RESTITUTION_SCALE = 0.1;
 const AI_SIMULATION_DURATION_SECONDS = 8;
@@ -222,6 +227,7 @@ export class RaceScene extends Phaser.Scene {
   private trajectoryGraphics?: Phaser.GameObjects.Graphics;
   private statusText?: Phaser.GameObjects.Text;
   private finishButton?: Phaser.GameObjects.Text;
+  private resetButton?: Phaser.GameObjects.Text;
   private weatherText?: Phaser.GameObjects.Text;
   private opponentText?: Phaser.GameObjects.Text;
   private flightMetricsText?: Phaser.GameObjects.Text;
@@ -282,6 +288,7 @@ export class RaceScene extends Phaser.Scene {
     this.trajectoryGraphics = this.add.graphics();
     this.airplane = this.createAirplane();
     this.finishButton = this.createFinishButton();
+    this.resetButton = this.createResetButton();
     this.statusText = this.add.text(24, 96, '', SCENE_SUBTITLE_STYLE).setScrollFactor(0);
 
     this.registerInput();
@@ -296,8 +303,30 @@ export class RaceScene extends Phaser.Scene {
 
     const velocity = this.airplane.body?.velocity ?? { x: 0, y: 0 };
     const currentAngularVelocity = this.airplane.body?.angularVelocity ?? 0;
+    let airplaneAngleRadians = this.airplane.rotation;
+
+    if (this.pitchDirection === 'neutral') {
+      airplaneAngleRadians = resolveGlideAlignmentRotation({
+        currentRotationRadians: airplaneAngleRadians,
+        velocity,
+        stabilityStat: this.airplaneStats.stability,
+        deltaMs: delta,
+      });
+      this.airplane.setRotation(airplaneAngleRadians);
+      this.airplane.setAngularVelocity(0);
+    } else {
+      this.airplane.setAngularVelocity(
+        resolvePitchControlAngularVelocity({
+          currentAngularVelocity: currentAngularVelocity * (1 - this.airplanePhysicsProfile.angularDamping),
+          direction: this.pitchDirection,
+          maxAngularVelocity: this.airplanePhysicsProfile.maxTorque,
+        }),
+      );
+      airplaneAngleRadians = this.airplane.rotation;
+    }
+
     const aerodynamicForce = calculateAerodynamicForce({
-      airplaneAngleRadians: this.airplane.rotation,
+      airplaneAngleRadians,
       velocity,
       liftMultiplier: LIFT_FORCE_MULTIPLIER,
       dragMultiplier: this.airplanePhysicsProfile.dragCoefficient * DRAG_FORCE_MULTIPLIER_SCALE,
@@ -306,13 +335,6 @@ export class RaceScene extends Phaser.Scene {
 
     this.airplane.applyForce(toPhaserVector(aerodynamicForce));
     this.airplane.applyForce(toPhaserVector(scaleVector(calculateWindEffect(this.weather, this.airplaneStats), delta / 1000)));
-    this.airplane.setAngularVelocity(
-      resolvePitchControlAngularVelocity({
-        currentAngularVelocity: currentAngularVelocity * (1 - this.airplanePhysicsProfile.angularDamping),
-        direction: this.pitchDirection,
-        maxAngularVelocity: this.airplanePhysicsProfile.maxTorque,
-      }),
-    );
 
     if (isFlightOutOfBounds({ x: this.airplane.x, y: this.airplane.y }, FLIGHT_BOUNDS)) {
       this.handleLanding('out_of_bounds');
@@ -321,7 +343,7 @@ export class RaceScene extends Phaser.Scene {
 
     const speed = vectorMagnitude(velocity);
     this.maxFlightX = Math.max(this.maxFlightX, this.airplane.x);
-    const angleOfAttack = calculateAngleOfAttackDegrees(this.airplane.rotation, velocity);
+    const angleOfAttack = calculateAngleOfAttackDegrees(airplaneAngleRadians, velocity);
     const coefficients = getAerodynamicCoefficients(angleOfAttack);
     const playerDistancePx = Math.max(0, this.airplane.x - this.launchStartX);
     const opponentProjectedDistance = this.resolveAnimatedOpponentDistance(this.time.now - this.flightStartTime);
@@ -333,7 +355,7 @@ export class RaceScene extends Phaser.Scene {
     this.statusText.setText([
       `速度 ${speed.toFixed(2)} px/s · 攻角 ${formatSignedAngle(angleOfAttack)}`,
       `升力系数 ${coefficients.lift.toFixed(2)} · 阻力系数 ${coefficients.drag.toFixed(3)}`,
-      `飞行控制：${this.pitchDirection === 'neutral' ? '未输入' : this.pitchDirection === 'up' ? '抬头' : '压头'} · 上半屏抬头 / 下半屏压头`,
+      `飞行控制：${this.pitchDirection === 'neutral' ? '自动滑翔' : this.pitchDirection === 'up' ? '抬头' : '压头'} · 轻触并按住上/下半屏微调，松开后自动顺着速度方向滑翔`,
       this.opponentResult
         ? `对手 ${this.opponent.name}：${formatOpponentPersonality(this.opponent.personality)} · 当前进度 ${Math.round(opponentProjectedDistance)}px / 目标 ${this.opponentResult.distance}px`
         : `对手 ${this.opponent.name}：等待同步起飞`,
@@ -395,7 +417,7 @@ export class RaceScene extends Phaser.Scene {
       .text(
         24,
         GAME_HEIGHT - 18,
-        `${formatStatsLabel(this.airplaneStats)}；当前天气：${this.weather.displayName}；按 R 可重置本次尝试。`,
+        `${formatStatsLabel(this.airplaneStats)}；当前天气：${this.weather.displayName}；可点“重新试飞”重置本次尝试。`,
         SCENE_HINT_STYLE,
       )
       .setOrigin(0, 0.5)
@@ -512,6 +534,17 @@ export class RaceScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         this.finishRace();
+      });
+  }
+
+  private createResetButton(): Phaser.GameObjects.Text {
+    return this.add
+      .text(GAME_WIDTH - 176, GAME_HEIGHT - 50, RESET_RACE_BUTTON.label, SCENE_BUTTON_STYLE)
+      .setOrigin(0.5)
+      .setScrollFactor(0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerdown', () => {
+        this.scene.restart(this.currentRaceSceneData);
       });
   }
 
@@ -797,8 +830,8 @@ export class RaceScene extends Phaser.Scene {
         ? `对手 ${this.opponent.name}：${this.opponentResult.score} 分 · 距离 ${this.opponentResult.distance}px · 滞空 ${(this.opponentResult.flightTimeMs / 1000).toFixed(2)}s`
         : '本轮未生成对手数据。',
       `天气 ${this.weather.displayName} ${getWindDirectionArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
-      '点击“进入结算”或按 Enter 继续。',
-      '按 R 可重新回到本场景起点再次测试。',
+      '点击“进入结算”继续，或点击“重新试飞”立刻再来一次。',
+      '桌面端也可按 Enter 继续、按 R 快速重置。',
     ]);
     this.renderTelemetry(0, Math.max(0, Math.round(GROUND_TOP_Y - this.airplane.y)), distance, this.opponentResult?.distance ?? 0);
   }
@@ -808,7 +841,7 @@ export class RaceScene extends Phaser.Scene {
       this.statusText?.setText([
         '请先完成一次发射并等待飞机碰地停止。',
         '拖拽纸飞机松手即可开始本轮测试。',
-        '按 R 可重置场景。',
+        '移动端可点击“重新试飞”，桌面端也可按 R 重置场景。',
       ]);
       return;
     }
@@ -846,7 +879,7 @@ export class RaceScene extends Phaser.Scene {
       '将纸飞机向后拖拽蓄力，松手即可发射。',
       `对手 ${this.opponent.name}（${formatOpponentPersonality(this.opponent.personality)}）会同步起飞并给出预估成绩。`,
       `当前天气：${this.weather.displayName} ${getWindDirectionArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
-      '发射后可轻触上/下半屏微调机头，并观察升力、风力效果、AI 进度与相机跟随。',
+      '发射后可轻触并按住上/下半屏微调机头，松开后会自动顺着速度方向滑翔。',
       '目标：观察飞机着陆或越界后进入带排名的计分结算。',
     ]);
     this.relativePositionText?.setText('相对位置：等待发射');
