@@ -27,3 +27,8 @@
   - 新增 `src/config/constants.ts`、`src/types/index.ts` 与 5 个核心场景空壳
   - 接入 Boot → Preload → MainMenu → Race → Result → MainMenu 最小闭环导航
   - 新增场景常量单元测试，并通过 Playwright 验证场景流转与截图
+- 项目初始化 Step 3 物理发射系统：
+  - 新增 `src/utils/math.ts` 与 `src/systems/PhysicsSystem.ts` 纯逻辑模块，覆盖向量运算、发射力、攻角与气动系数查表
+  - 新增 `src/utils/math.test.ts` 与 `src/systems/PhysicsSystem.test.ts`，补齐 Step 3 的 Vitest 覆盖
+  - 将 `RaceScene` 升级为可拖拽发射的 Matter.js 原型场景，包含轨迹虚线预览、白色三角纸飞机、地面静态碰撞体与落地停止
+  - 完成 `pnpm lint`、`pnpm test`、`pnpm test:coverage`、`pnpm build` 与 Playwright 交互截图验证
