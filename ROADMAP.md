@@ -139,20 +139,20 @@
   - [x] 单元测试：ContentLoader 新增查询接口 + skills/buffs 数据 schema 校验
   - [x] 验证：`pnpm test:coverage` 通过，`pnpm lint` 通过，所有技能和 Buff 数据正确加载
 
-- [ ] **Step 2: SkillSystem 主动技能与Buff管理逻辑**
-  - [ ] 创建 `src/systems/SkillSystem.ts`：技能与 Buff 纯逻辑模块
-    - [ ] `activateSkill(skill, currentTime) → { buff: Buff, cooldownEnd: number }` — 激活主动技能，生成对应 Buff 并设置冷却
-    - [ ] `updateCooldowns(skillStates, currentTime) → SkillState[]` — 更新所有技能的冷却状态（返回是否可用）
-    - [ ] `isSkillReady(skillState, currentTime) → boolean` — 判断技能是否已冷却完毕
-    - [ ] `applyBuff(buff, baseStats) → AirplaneStats` — 将单个 Buff 的属性修正应用到基础属性上
-    - [ ] `getActiveBuffs(buffs, currentTime) → Buff[]` — 过滤出当前仍在生效的 Buff
-    - [ ] `removeExpiredBuffs(buffs, currentTime) → Buff[]` — 移除已过期的 Buff
-    - [ ] `calculateBuffedStats(baseStats, activeBuffs) → AirplaneStats` — 叠加所有生效 Buff 后的最终属性
-    - [ ] `checkPassiveTrigger(skill, triggerEvent) → boolean` — 检查被动技能的触发条件是否满足
-    - [ ] `resolveBuffConflicts(buffs) → Buff[]` — 同类 Buff 不叠加取最高值，互斥 Buff 处理
-  - [ ] 创建辅助类型 `SkillState`（技能运行时状态：技能引用 + 冷却结束时间 + 使用次数）
-  - [ ] 单元测试：技能激活冷却、Buff 叠加/过期/冲突、被动触发条件、属性修正计算
-  - [ ] 验证：`pnpm test:coverage` ≥ 80%（systems/），`pnpm lint` 通过
+- [x] **Step 2: SkillSystem 主动技能与Buff管理逻辑**
+  - [x] 创建 `src/systems/SkillSystem.ts`：技能与 Buff 纯逻辑模块
+    - [x] `activateSkill(skill, currentTime) → { buff: Buff, cooldownEnd: number }` — 激活主动技能，生成对应 Buff 并设置冷却
+    - [x] `updateCooldowns(skillStates, currentTime) → SkillState[]` — 更新所有技能的冷却状态（返回是否可用）
+    - [x] `isSkillReady(skillState, currentTime) → boolean` — 判断技能是否已冷却完毕
+    - [x] `applyBuff(buff, baseStats) → AirplaneStats` — 将单个 Buff 的属性修正应用到基础属性上
+    - [x] `getActiveBuffs(buffs, currentTime) → Buff[]` — 过滤出当前仍在生效的 Buff
+    - [x] `removeExpiredBuffs(buffs, currentTime) → Buff[]` — 移除已过期的 Buff
+    - [x] `calculateBuffedStats(baseStats, activeBuffs) → AirplaneStats` — 叠加所有生效 Buff 后的最终属性
+    - [x] `checkPassiveTrigger(skill, triggerEvent) → boolean` — 检查被动技能的触发条件是否满足
+    - [x] `resolveBuffConflicts(buffs) → Buff[]` — 同类 Buff 不叠加取最高值，互斥 Buff 处理
+  - [x] 创建辅助类型 `SkillState`（技能运行时状态：技能引用 + 冷却结束时间 + 使用次数）
+  - [x] 单元测试：技能激活冷却、Buff 叠加/过期/冲突、被动触发条件、属性修正计算
+  - [x] 验证：`pnpm test:coverage` ≥ 80%（systems/），`pnpm lint` 通过
 
 - [ ] **Step 3: 锦标赛系统核心逻辑（TournamentSystem）**
   - [ ] 创建 `src/systems/TournamentSystem.ts`：锦标赛路径生成与 Run 状态管理纯逻辑模块
