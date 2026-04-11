@@ -8,6 +8,7 @@
 - 将 Phase 1 MVP 路线图从 9 个概要条目细化为 7 个 Step（共 40+ 子任务），每个 Step 包含具体的模块/文件、验证标准和测试要求，便于 Agent 逐步执行
 
 ### 新增
+- GitHub Actions CI / CD 工作流：对 push / pull_request 执行 `pnpm lint`、`pnpm test`、`pnpm test:coverage`、`pnpm build`，并在 `main` 分支自动构建发布 GitHub Pages
 - 项目文档体系：README.md、CLAUDE.md、技术选型、游戏设计、系统架构、美术设计文档
 - 开发路线图 (ROADMAP.md)
 - 变更日志 (CHANGELOG.md)
