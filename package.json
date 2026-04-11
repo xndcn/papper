@@ -23,6 +23,7 @@
   "homepage": "https://github.com/xndcn/papper#readme",
   "packageManager": "pnpm@10.33.0",
   "dependencies": {
+    "@fontsource/noto-sans-sc": "5.2.9",
     "phaser": "3.90.0"
   },
   "devDependencies": {

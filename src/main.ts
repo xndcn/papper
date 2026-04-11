@@ -1,3 +1,5 @@
+import '@fontsource/noto-sans-sc/chinese-simplified-400.css';
+
 import Phaser from 'phaser';
 
 import {
@@ -17,6 +19,14 @@ declare global {
 
 function syncGameReference(game: Phaser.Game | undefined): void {
   window.__PAPER_GAME__ = game;
+}
+
+async function waitForSceneFont(): Promise<void> {
+  if (!('fonts' in document)) {
+    return;
+  }
+
+  await document.fonts.load(`16px ${JSON.stringify('Noto Sans SC')}`);
 }
 
 function createGame(): Phaser.Game {
@@ -44,16 +54,24 @@ function createGame(): Phaser.Game {
   });
 }
 
-let game = createGame();
-syncGameReference(game);
+let game: Phaser.Game | undefined;
+
+async function bootstrapGame(): Promise<void> {
+  await waitForSceneFont();
+  game = createGame();
+  syncGameReference(game);
+}
+
+void bootstrapGame();
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     syncGameReference(undefined);
-    game.destroy(true);
+    game?.destroy(true);
   });
 
-  import.meta.hot.accept(() => {
+  import.meta.hot.accept(async () => {
+    await waitForSceneFont();
     game = createGame();
     syncGameReference(game);
   });

@@ -9,8 +9,16 @@
 - MainMenuScene 与 RaceScene 现在会通过场景 data 传递所选基础机型属性，并将速度 / 滑翔 / 稳定 / 特技 / 耐久映射到发射、阻力、俯仰与碰撞物理参数
 - RaceScene 现在会在开局按权重选择天气预设，并在飞行阶段持续施加与稳定属性相关的风力效果，同时在 HUD 中显示天气名称与风向指示
 - ResultScene 现在会展示玩家与 AI 对手的 1v1 排名、得分、飞行距离、滞空时间与 AI 发射参数摘要
+- MainMenu / Build / Race / Result 现已打通完整 Phase 1 Step 6 比赛闭环，并在 ResultScene 中支持“再来一局”与“返回菜单”双按钮导航
+- 主场景现在会在中文 Web Font 加载完成后再创建 Phaser 实例，修复无中文系统字体环境下的方块字问题
 
 ### 新增
+- Phase 1 Step 6 完整比赛流程与场景打磨：
+  - 升级 BootScene 与 PreloadScene：增加 Logo / 标题、最小化加载动画、JSON 资源预加载、像素风进度条与加载提示文本
+  - 升级 MainMenuScene：增加“纸翼传说”标题、“开始比赛”入口和纸飞机飘飞背景动画
+  - 升级 RaceScene：新增速度仪表、高度/距离 HUD、风向读数、AI 相对位置提示与可复用 replay 数据
+  - 升级 ResultScene：新增“第 X 名 / 共 2 人”排名标题、距离分 + 滞空分明细、“再来一局” / “返回菜单”按钮
+  - 新增 `src/utils/scenePresentation.ts` 与对应单元测试，集中管理 Step 6 资源预加载清单、风向箭头与 AI 相对位置文案
 - Phase 1 Step 5 AI 对手系统：
   - 新增 `src/systems/OpponentAI.ts` 与 `src/systems/OpponentAI.test.ts`，覆盖 AI 发射策略、简化飞行模拟与最终得分生成
   - 更新 `RaceScene`：发射时同步生成 AI 结果，并在飞行 HUD 中显示对手信息与进度指示器

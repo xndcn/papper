@@ -14,7 +14,7 @@ import { getAirplanes } from '@/systems/ContentLoader';
 import type { Airplane, BuildSceneData, SceneNavigationButton } from '@/types';
 
 const OPEN_BUILD_BUTTON: SceneNavigationButton = {
-  label: '进入构建',
+  label: '开始比赛',
   target: SCENE_KEYS.BUILD,
 };
 
@@ -35,28 +35,32 @@ export class MainMenuScene extends Phaser.Scene {
 
   create(): void {
     this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
+    this.createBackgroundAnimation();
 
-    this.add.text(GAME_CENTER_X, GAME_CENTER_Y - 54, '主菜单', SCENE_TITLE_STYLE).setOrigin(0.5);
+    this.add.text(GAME_CENTER_X, GAME_CENTER_Y - 76, '纸翼传说', SCENE_TITLE_STYLE).setOrigin(0.5);
     this.add
-        .text(GAME_CENTER_X, GAME_CENTER_Y - 28, 'Phase 1 · Step 4：选择基础机型，再进入构建界面装配零件', SCENE_SUBTITLE_STYLE)
-        .setOrigin(0.5);
+      .text(GAME_CENTER_X, GAME_CENTER_Y - 52, 'Paper Wings Legend · 调整纸翼，迎风启航', SCENE_SUBTITLE_STYLE)
+      .setOrigin(0.5);
+    this.add
+      .text(GAME_CENTER_X, GAME_CENTER_Y - 30, '选择基础机型后进入构建界面，完成本轮 1v1 比赛循环', SCENE_SUBTITLE_STYLE)
+      .setOrigin(0.5);
 
-    this.selectedAirplaneNameText = this.add.text(GAME_CENTER_X, GAME_CENTER_Y - 2, '', SCENE_TITLE_STYLE).setOrigin(0.5);
+    this.selectedAirplaneNameText = this.add.text(GAME_CENTER_X, GAME_CENTER_Y + 4, '', SCENE_TITLE_STYLE).setOrigin(0.5);
     this.selectedAirplaneStatsText = this.add
-      .text(GAME_CENTER_X, GAME_CENTER_Y + 24, '', SCENE_SUBTITLE_STYLE)
+      .text(GAME_CENTER_X, GAME_CENTER_Y + 28, '', SCENE_SUBTITLE_STYLE)
       .setOrigin(0.5);
 
     const previousButton = this.add
-      .text(GAME_CENTER_X - 126, GAME_CENTER_Y - 2, '←', SCENE_BUTTON_STYLE)
+      .text(GAME_CENTER_X - 126, GAME_CENTER_Y + 4, '←', SCENE_BUTTON_STYLE)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     const nextButton = this.add
-      .text(GAME_CENTER_X + 126, GAME_CENTER_Y - 2, '→', SCENE_BUTTON_STYLE)
+      .text(GAME_CENTER_X + 126, GAME_CENTER_Y + 4, '→', SCENE_BUTTON_STYLE)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
     const startButton = this.add
-      .text(GAME_CENTER_X, GAME_CENTER_Y + 62, OPEN_BUILD_BUTTON.label, SCENE_BUTTON_STYLE)
+      .text(GAME_CENTER_X, GAME_CENTER_Y + 72, OPEN_BUILD_BUTTON.label, SCENE_BUTTON_STYLE)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
@@ -88,10 +92,38 @@ export class MainMenuScene extends Phaser.Scene {
     this.events.once(Phaser.Scenes.Events.DESTROY, cleanupKeyboardListeners);
 
     this.add
-      .text(GAME_CENTER_X, GAME_CENTER_Y + 104, '点击箭头或按 ← / → 切换飞机，按 Enter 进入构建', SCENE_HINT_STYLE)
+      .text(GAME_CENTER_X, GAME_CENTER_Y + 112, '点击箭头或按 ← / → 切换飞机，点击“开始比赛”或按 Enter 进入构建', SCENE_HINT_STYLE)
       .setOrigin(0.5);
 
     this.refreshSelection();
+  }
+
+  private createBackgroundAnimation(): void {
+    const planeConfigs = [
+      { x: -40, y: 54, scale: 0.9, alpha: 0.24, duration: 7000 },
+      { x: GAME_CENTER_X - 36, y: 104, scale: 0.7, alpha: 0.18, duration: 5600 },
+      { x: GAME_CENTER_X + 84, y: 150, scale: 0.55, alpha: 0.14, duration: 4800 },
+    ] as const;
+
+    planeConfigs.forEach((config, index) => {
+      const plane = this.add
+        .triangle(config.x, config.y, 0, 10, 40, 0, 40, 20, 0xf8fafc, config.alpha)
+        .setScale(config.scale)
+        .setRotation(Phaser.Math.DegToRad(-12 + index * 8));
+
+      this.tweens.add({
+        targets: plane,
+        x: GAME_CENTER_X + 300,
+        y: config.y - 12 + index * 10,
+        duration: config.duration,
+        ease: 'Sine.InOut',
+        repeat: -1,
+        delay: index * 300,
+        onRepeat: () => {
+          plane.setPosition(-40, config.y);
+        },
+      });
+    });
   }
 
   private createBuildSceneData(): BuildSceneData {
@@ -112,6 +144,6 @@ export class MainMenuScene extends Phaser.Scene {
     const airplane = this.airplanes[this.selectedAirplaneIndex];
 
     this.selectedAirplaneNameText?.setText(airplane.name);
-    this.selectedAirplaneStatsText?.setText(formatStatsLabel(airplane));
+    this.selectedAirplaneStatsText?.setText(`${airplane.description}\n${formatStatsLabel(airplane)}`);
   }
 }

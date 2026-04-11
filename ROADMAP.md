@@ -105,14 +105,14 @@
   - [x] 单元测试：AI 发射参数合理性、飞行距离与属性正相关、不同性格行为差异
   - [x] 验证：比赛中可看到 AI 对手存在感，结算时有明确的胜负排名
 
-- [ ] **Step 6: 完整比赛流程与场景打磨**
-  - [ ] BootScene 升级：显示游戏 Logo / 标题文字 + 最小化加载动画，自动过渡到 PreloadScene
-  - [ ] PreloadScene 升级：加载 JSON 数据文件（airplanes / parts / weather / opponents），显示像素风进度条和加载提示文本
-  - [ ] MainMenuScene 升级：游戏标题"纸翼传说"+ 副标题 + "开始比赛"按钮 + 简单纸飞机飘飞背景动画
-  - [ ] RaceScene HUD 增强：速度仪表、高度/距离计数器、风向指示器、AI 对手相对位置指示
-  - [ ] ResultScene 升级：排名展示（第 X 名/共 2 人）、得分明细（距离分 + 滞空分）、"再来一局" / "返回菜单"按钮
-  - [ ] 触屏兼容验证：确保 BuildScene 的点击选择、RaceScene 的拖拽发射和俯仰控制在移动端触屏正常工作
-  - [ ] 验证：完成从 MainMenu → Build → Race → Result → MainMenu 的完整闭环，所有场景 UI 可读可操作
+- [x] **Step 6: 完整比赛流程与场景打磨**
+  - [x] BootScene 升级：显示游戏 Logo / 标题文字 + 最小化加载动画，自动过渡到 PreloadScene
+  - [x] PreloadScene 升级：加载 JSON 数据文件（airplanes / parts / weather / opponents），显示像素风进度条和加载提示文本
+  - [x] MainMenuScene 升级：游戏标题"纸翼传说"+ 副标题 + "开始比赛"按钮 + 简单纸飞机飘飞背景动画
+  - [x] RaceScene HUD 增强：速度仪表、高度/距离计数器、风向指示器、AI 对手相对位置指示
+  - [x] ResultScene 升级：排名展示（第 X 名/共 2 人）、得分明细（距离分 + 滞空分）、"再来一局" / "返回菜单"按钮
+  - [x] 触屏兼容验证：确保 BuildScene 的点击选择、RaceScene 的拖拽发射和俯仰控制在移动端触屏正常工作
+  - [x] 验证：完成从 MainMenu → Build → Race → Result → MainMenu 的完整闭环，所有场景 UI 可读可操作
 
 - [ ] **Step 7: 测试收尾与文档更新**
   - [ ] 所有新增 systems 和 utils 模块的 Vitest 单元测试覆盖率 ≥ 80%

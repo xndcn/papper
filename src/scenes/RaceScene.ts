@@ -44,6 +44,7 @@ import type {
   SceneNavigationButton,
   Weather,
 } from '@/types';
+import { formatRelativeRacePosition, getWindDirectionArrow } from '@/utils/scenePresentation';
 import { clamp, lerp, scaleVector, subtractVectors, vectorMagnitude, type Vector2Like } from '@/utils/math';
 
 const FINISH_RACE_BUTTON: SceneNavigationButton = {
@@ -150,19 +151,6 @@ function formatSignedAngle(angle: number): string {
   return `${sign}${angle.toFixed(1)}°`;
 }
 
-function getWindArrow(weather: Weather): string {
-  if (weather.windStrength <= 0 || vectorMagnitude(weather.windDirection) === 0) {
-    return '·';
-  }
-
-  const arrowBySector = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'] as const;
-  const angle = Math.atan2(weather.windDirection.y, weather.windDirection.x);
-  const normalizedTurns = ((angle / (Math.PI * 2)) + 1) % 1;
-  const sectorIndex = Math.round(normalizedTurns * arrowBySector.length) % arrowBySector.length;
-
-  return arrowBySector[sectorIndex];
-}
-
 function formatOpponentPersonality(personality: Opponent['personality']): string {
   switch (personality) {
     case 'aggressive':
@@ -230,6 +218,10 @@ export class RaceScene extends Phaser.Scene {
   private finishButton?: Phaser.GameObjects.Text;
   private weatherText?: Phaser.GameObjects.Text;
   private opponentText?: Phaser.GameObjects.Text;
+  private flightMetricsText?: Phaser.GameObjects.Text;
+  private relativePositionText?: Phaser.GameObjects.Text;
+  private speedGaugeLabelText?: Phaser.GameObjects.Text;
+  private speedGaugeGraphics?: Phaser.GameObjects.Graphics;
   private playerProgressMarker?: Phaser.GameObjects.Arc;
   private opponentProgressMarker?: Phaser.GameObjects.Arc;
   private airplaneName = DEFAULT_AIRPLANE.name;
@@ -326,8 +318,10 @@ export class RaceScene extends Phaser.Scene {
     const coefficients = getAerodynamicCoefficients(angleOfAttack);
     const playerDistancePx = Math.max(0, this.airplane.x - this.launchStartX);
     const opponentProjectedDistance = this.resolveAnimatedOpponentDistance(this.time.now - this.flightStartTime);
+    const altitudePx = Math.max(0, Math.round(GROUND_TOP_Y - this.airplane.y));
 
     this.updateProgressMarkers(playerDistancePx, opponentProjectedDistance);
+    this.renderTelemetry(speed, altitudePx, Math.round(playerDistancePx), Math.round(opponentProjectedDistance));
 
     this.statusText.setText([
       `速度 ${speed.toFixed(2)} px/s · 攻角 ${formatSignedAngle(angleOfAttack)}`,
@@ -345,7 +339,7 @@ export class RaceScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         48,
-        'Phase 1 · Step 5：AI 对手会根据天气决策发射，并在 HUD 中显示进度对比',
+        'Phase 1 · Step 6：完整 HUD 显示速度、高度、距离、风向与 AI 相对位置',
         SCENE_SUBTITLE_STYLE,
       )
       .setOrigin(0.5)
@@ -362,11 +356,21 @@ export class RaceScene extends Phaser.Scene {
       .text(
         GAME_WIDTH - 24,
         18,
-        `天气：${this.weather.displayName} ${getWindArrow(this.weather)} 风力 ${this.weather.windStrength}`,
+        `天气：${this.weather.displayName} ${getWindDirectionArrow(this.weather)} 风力 ${this.weather.windStrength}`,
         SCENE_SUBTITLE_STYLE,
       )
       .setOrigin(1, 0)
       .setScrollFactor(0);
+    this.flightMetricsText = this.add.text(24, 94, '', SCENE_SUBTITLE_STYLE).setScrollFactor(0);
+    this.relativePositionText = this.add
+      .text(GAME_WIDTH - 24, 62, '相对位置：等待发射', SCENE_SUBTITLE_STYLE)
+      .setOrigin(1, 0)
+      .setScrollFactor(0);
+    this.speedGaugeLabelText = this.add
+      .text(GAME_WIDTH - 24, 94, '速度仪表 0 px/s', SCENE_SUBTITLE_STYLE)
+      .setOrigin(1, 0)
+      .setScrollFactor(0);
+    this.speedGaugeGraphics = this.add.graphics().setScrollFactor(0);
     this.add.text(24, PROGRESS_TRACK_Y, '你', SCENE_HINT_STYLE).setOrigin(0, 0.5).setScrollFactor(0);
     this.add.text(132, PROGRESS_TRACK_Y, 'AI', SCENE_HINT_STYLE).setOrigin(0, 0.5).setScrollFactor(0);
     this.add.rectangle(
@@ -389,6 +393,33 @@ export class RaceScene extends Phaser.Scene {
       )
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
+    this.renderSpeedGauge(0);
+  }
+
+  private renderTelemetry(speed: number, altitudePx: number, playerDistancePx: number, opponentDistancePx: number): void {
+    this.flightMetricsText?.setText([
+      `高度 ${altitudePx}px · 距离 ${playerDistancePx}px`,
+      `风向 ${getWindDirectionArrow(this.weather)} · 风力 ${this.weather.windStrength} · AI ${opponentDistancePx}px`,
+    ]);
+    this.relativePositionText?.setText(formatRelativeRacePosition(playerDistancePx, opponentDistancePx));
+    this.renderSpeedGauge(speed);
+  }
+
+  private renderSpeedGauge(speed: number): void {
+    const gaugeX = GAME_WIDTH - 120;
+    const gaugeY = 118;
+    const gaugeWidth = 96;
+    const gaugeHeight = 8;
+    const normalizedSpeed = clamp(speed / 320, 0, 1);
+
+    this.speedGaugeGraphics?.clear();
+    this.speedGaugeGraphics?.fillStyle(0x1e293b, 1);
+    this.speedGaugeGraphics?.fillRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight);
+    this.speedGaugeGraphics?.fillStyle(0x38bdf8, 1);
+    this.speedGaugeGraphics?.fillRect(gaugeX, gaugeY, gaugeWidth * normalizedSpeed, gaugeHeight);
+    this.speedGaugeGraphics?.lineStyle(1, 0xe2e8f0, 0.85);
+    this.speedGaugeGraphics?.strokeRect(gaugeX, gaugeY, gaugeWidth, gaugeHeight);
+    this.speedGaugeLabelText?.setText(`速度仪表 ${Math.round(speed)} px/s`);
   }
 
   private createParallaxBackground(): void {
@@ -728,6 +759,11 @@ export class RaceScene extends Phaser.Scene {
       playerName: this.airplaneName,
       opponentResult: this.opponentResult,
       rankings,
+      replayData: this.currentRaceSceneData,
+      scoreBreakdown: {
+        distanceScore: score.distanceScore,
+        airtimeScore: score.airtimeScore,
+      },
       summary: generateRaceSummary({
         airplaneName: this.airplaneName,
         opponent: this.opponent,
@@ -747,10 +783,11 @@ export class RaceScene extends Phaser.Scene {
       this.opponentResult
         ? `对手 ${this.opponent.name}：${this.opponentResult.score} 分 · 距离 ${this.opponentResult.distance}px · 滞空 ${(this.opponentResult.flightTimeMs / 1000).toFixed(2)}s`
         : '本轮未生成对手数据。',
-      `天气 ${this.weather.displayName} ${getWindArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
+      `天气 ${this.weather.displayName} ${getWindDirectionArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
       '点击“进入结算”或按 Enter 继续。',
       '按 R 可重新回到本场景起点再次测试。',
     ]);
+    this.renderTelemetry(0, Math.max(0, Math.round(GROUND_TOP_Y - this.airplane.y)), distance, this.opponentResult?.distance ?? 0);
   }
 
   private finishRace(): void {
@@ -794,9 +831,15 @@ export class RaceScene extends Phaser.Scene {
     this.statusText.setText([
       '将纸飞机向后拖拽蓄力，松手即可发射。',
       `对手 ${this.opponent.name}（${formatOpponentPersonality(this.opponent.personality)}）会同步起飞并给出预估成绩。`,
-      `当前天气：${this.weather.displayName} ${getWindArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
+      `当前天气：${this.weather.displayName} ${getWindDirectionArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
       '发射后可轻触上/下半屏微调机头，并观察升力、风力效果、AI 进度与相机跟随。',
       '目标：观察飞机着陆或越界后进入带排名的计分结算。',
     ]);
+    this.relativePositionText?.setText('相对位置：等待发射');
+    this.flightMetricsText?.setText([
+      '高度 0px · 距离 0px',
+      `风向 ${getWindDirectionArrow(this.weather)} · 风力 ${this.weather.windStrength} · AI 0px`,
+    ]);
+    this.renderSpeedGauge(0);
   }
 }
