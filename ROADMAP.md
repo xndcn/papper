@@ -128,7 +128,7 @@
 > IndexedDB 存档、Meta 进度和馆主对手，最终形成可玩的多场比赛 Roguelike Run 闭环。
 
 - [ ] **Step 1: 技能与Buff数据模型与内容数据**
-  - [ ] 扩展 `src/types/index.ts`：新增 Phase 2 所需类型定义（参照 architecture.md §4 数据模型）
+  - [ ] 扩展 `src/types/index.ts`：新增 Phase 2 所需类型定义（参照 architecture.md「数据模型设计」章节）
     - 技能相关：SkillType、TriggerType、SkillEffect、Skill
     - Buff 相关：Buff
     - 锦标赛相关：TournamentNodeType、TournamentNode、TournamentMap、TournamentRun、Reward、EventData
@@ -165,10 +165,10 @@
     - [ ] `getRunRewards(run) → Reward[]` — 计算 Run 结束时的总奖励（根据胜败差异化）
     - [ ] `abandonRun(run) → TournamentRun` — 放弃当前 Run
   - [ ] 创建 `src/utils/SeedManager.ts`：确定性伪随机数生成器（基于种子的 PRNG）
-    - [ ] `createRNG(seed) → () => number` — 返回一个基于种子的 0-1 随机数生成函数
-    - [ ] `randomInt(rng, min, max) → number` — 生成范围内的随机整数
-    - [ ] `weightedChoice(rng, items, weights) → T` — 带权重的随机选择
-    - [ ] `shuffle(rng, array) → T[]` — 确定性洗牌
+    - [ ] `createRNG(seed: number) → () => number` — 返回一个基于种子的 0-1 随机数生成函数
+    - [ ] `randomInt(rng: () => number, min: number, max: number) → number` — 生成范围内的随机整数
+    - [ ] `weightedChoice<T>(rng: () => number, items: T[], weights: number[]) → T` — 带权重的随机选择
+    - [ ] `shuffle<T>(rng: () => number, array: T[]) → T[]` — 确定性洗牌
   - [ ] 新增更多 AI 对手到 `src/data/opponents.json`：新增 2-3 个不同难度和性格的对手（用于锦标赛普通比赛和精英比赛节点）
   - [ ] 单元测试：地图生成确定性（同种子同结果）、节点类型分布合理性、Run 状态流转、种子管理器
   - [ ] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过
@@ -187,7 +187,7 @@
     - [ ] `exportSave() → Promise<string>` — 导出存档为 JSON 字符串
     - [ ] `importSave(json: string) → Promise<void>` — 导入存档（含版本校验）
     - [ ] `createDefaultSaveData() → SaveData` — 创建初始默认存档数据
-  - [ ] 创建 `src/utils/GameState.ts`：全局游戏状态单例（参照 architecture.md §7）
+  - [ ] 创建 `src/utils/GameState.ts`：全局游戏状态单例（参照 architecture.md「状态管理方案」章节）
     - [ ] 持有 `currentSaveData` 和 `currentRun`
     - [ ] 提供 `getSaveData()` / `getCurrentRun()` / `updateSaveData()` / `updateRun()` 不可变更新接口
     - [ ] 集成事件发射（saveDataChanged / runChanged）
@@ -197,7 +197,7 @@
 - [ ] **Step 5: Meta 进度系统（ProgressSystem）**
   - [ ] 创建 `src/systems/ProgressSystem.ts`：跨 Run 永久进度管理纯逻辑模块
     - [ ] `addExperience(meta, amount) → MetaProgress` — 增加经验值，自动计算升级
-    - [ ] `getMetaLevel(experience) → number` — 根据累计经验计算当前等级（参照 game-design.md §8.1 经验等级表）
+    - [ ] `getMetaLevel(experience) → number` — 根据累计经验计算当前等级（参照 game-design.md「Meta 进度（永久保留）」章节经验等级表）
     - [ ] `getExperienceForLevel(level) → number` — 获取指定等级所需的累计经验
     - [ ] `checkUnlockConditions(meta, condition) → boolean` — 检查特定内容是否已满足解锁条件
     - [ ] `getUnlockedContent(meta) → { airplanes: string[], skills: string[], partPool: string[] }` — 根据当前等级返回已解锁的内容 ID 列表
@@ -246,7 +246,7 @@
     - [ ] 比赛结束自动存档（通过 GameState.updateSaveData + SaveManager.autoSave）
     - [ ] Run 结束时：计算经验奖励 → 更新 MetaProgress → 保存存档 → 返回主菜单
   - [ ] 集成 ProgressSystem 到 Run 结算流程
-    - [ ] Run 胜利/失败 → 分别计算经验（game-design.md §2.2 结算规则）
+    - [ ] Run 胜利/失败 → 分别计算经验（game-design.md「锦标赛 Run」章节 Run 结算规则）
     - [ ] 零件保留规则（胜利全额保留，失败保留 1 个）
     - [ ] 等级提升时检查新解锁内容
   - [ ] 完整 Roguelike Run 流程验证
