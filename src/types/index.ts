@@ -112,6 +112,8 @@ export interface ResultSceneData {
   readonly playerName?: string;
   readonly opponentResult?: OpponentRaceResult;
   readonly rankings?: readonly RaceParticipantResult[];
+  readonly replayData?: RaceSceneData;
+  readonly scoreBreakdown?: ScoreBreakdown;
 }
 
 export interface BuildSceneData {
@@ -141,4 +143,9 @@ export interface OpponentRaceResult extends RaceParticipantResult {
   readonly personality: OpponentPersonality;
   readonly launchAngleDegrees: number;
   readonly launchPower: number;
+}
+
+export interface ScoreBreakdown {
+  readonly distanceScore: number;
+  readonly airtimeScore: number;
 }

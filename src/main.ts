@@ -1,3 +1,5 @@
+import '@fontsource/noto-sans-sc/chinese-simplified-400.css';
+
 import Phaser from 'phaser';
 
 import {
@@ -9,6 +11,8 @@ import {
 } from '@/utils/gameSettings';
 import { CORE_SCENES } from '@/scenes';
 
+const FONT_LOAD_TIMEOUT_MS = 2000;
+
 declare global {
   interface Window {
     __PAPER_GAME__?: Phaser.Game;
@@ -17,6 +21,23 @@ declare global {
 
 function syncGameReference(game: Phaser.Game | undefined): void {
   window.__PAPER_GAME__ = game;
+}
+
+async function waitForSceneFont(): Promise<void> {
+  if (!('fonts' in document)) {
+    return;
+  }
+
+  try {
+    await Promise.race([
+      document.fonts.load(`16px "Noto Sans SC"`),
+      new Promise((resolve) => {
+        window.setTimeout(resolve, FONT_LOAD_TIMEOUT_MS);
+      }),
+    ]);
+  } catch {
+    // Fall back to system fonts if the bundled web font fails to initialize.
+  }
 }
 
 function createGame(): Phaser.Game {
@@ -44,16 +65,24 @@ function createGame(): Phaser.Game {
   });
 }
 
-let game = createGame();
-syncGameReference(game);
+let game: Phaser.Game | undefined;
+
+async function bootstrapGame(): Promise<void> {
+  await waitForSceneFont();
+  game = createGame();
+  syncGameReference(game);
+}
+
+void bootstrapGame();
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
     syncGameReference(undefined);
-    game.destroy(true);
+    game?.destroy(true);
   });
 
-  import.meta.hot.accept(() => {
+  import.meta.hot.accept(async () => {
+    await waitForSceneFont();
     game = createGame();
     syncGameReference(game);
   });
