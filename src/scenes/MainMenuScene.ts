@@ -84,11 +84,13 @@ export class MainMenuScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-LEFT', handlePrevious);
     this.input.keyboard?.on('keydown-RIGHT', handleNext);
     this.input.keyboard?.on('keydown-ENTER', handleStart);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+    const cleanupKeyboardListeners = () => {
       this.input.keyboard?.off('keydown-LEFT', handlePrevious);
       this.input.keyboard?.off('keydown-RIGHT', handleNext);
       this.input.keyboard?.off('keydown-ENTER', handleStart);
-    });
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupKeyboardListeners);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanupKeyboardListeners);
 
     this.add
       .text(GAME_CENTER_X, GAME_CENTER_Y + 104, '点击箭头或按 ← / → 切换飞机，按 Enter 开始比赛', SCENE_HINT_STYLE)
