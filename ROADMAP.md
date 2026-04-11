@@ -73,15 +73,15 @@
   - [x] 单元测试：属性映射函数边界值 + AirplaneStatsSystem 加成计算
   - [x] 验证：选择不同飞机（速度型 vs 稳定型）时飞行手感有明显差异
 
-- [ ] **Step 3: 基础天气系统**
-  - [ ] 创建 `src/systems/WeatherSystem.ts`：天气纯逻辑模块
-    - `getWindVector(weather)` — 从天气预设获取风向力向量
-    - `calculateWindEffect(weather, airplaneStats)` — 计算风力对飞机的有效作用力（Stability 属性减少风力影响）
-    - `selectWeather(presets, seed?)` — 根据预设权重随机选择天气
-  - [ ] 在 RaceScene 飞行 update 循环中集成风力：每帧施加 windEffect 外力到飞机刚体
-  - [ ] RaceScene HUD 添加天气信息显示：当前天气名称 + 风向箭头指示
-  - [ ] 单元测试：风力计算（顺风加速 / 逆风减速 / 无风零力）、稳定属性减风验证
-  - [ ] 验证：顺风下飞机飞行距离显著增加，逆风下显著缩短；HUD 正确显示天气信息
+- [x] **Step 3: 基础天气系统**
+  - [x] 创建 `src/systems/WeatherSystem.ts`：天气纯逻辑模块
+    - [x] `getWindVector(weather)` — 从天气预设获取风向力向量
+    - [x] `calculateWindEffect(weather, airplaneStats)` — 计算风力对飞机的有效作用力（Stability 属性减少风力影响）
+    - [x] `selectWeather(presets, seed?)` — 根据预设权重随机选择天气
+  - [x] 在 RaceScene 飞行 update 循环中集成风力：每帧施加 windEffect 外力到飞机刚体
+  - [x] RaceScene HUD 添加天气信息显示：当前天气名称 + 风向箭头指示
+  - [x] 单元测试：风力计算（顺风加速 / 逆风减速 / 无风零力）、稳定属性减风验证
+  - [x] 验证：顺风下飞机飞行距离显著增加，逆风下显著缩短；HUD 正确显示天气信息
 
 - [ ] **Step 4: 构建场景与零件装配**
   - [ ] 创建 `src/scenes/BuildScene.ts`：赛前构建界面

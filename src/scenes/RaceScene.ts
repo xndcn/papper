@@ -11,7 +11,7 @@ import {
   SCENE_TITLE_STYLE,
 } from '@/config/constants';
 import { calculateFinalStats } from '@/systems/AirplaneStatsSystem';
-import { getAirplanes } from '@/systems/ContentLoader';
+import { getAirplanes, getWeatherPresets } from '@/systems/ContentLoader';
 import {
   calculateAerodynamicForce,
   calculateAngleOfAttackDegrees,
@@ -26,7 +26,8 @@ import {
   type PitchControlDirection,
 } from '@/systems/PhysicsSystem';
 import { calculateFlightScore, isFlightOutOfBounds } from '@/systems/RaceSystem';
-import type { AirplaneStats, RaceSceneData, ResultSceneData, SceneNavigationButton } from '@/types';
+import { calculateWindEffect, selectWeather } from '@/systems/WeatherSystem';
+import type { AirplaneStats, RaceSceneData, ResultSceneData, SceneNavigationButton, Weather } from '@/types';
 import { clamp, scaleVector, subtractVectors, vectorMagnitude, type Vector2Like } from '@/utils/math';
 
 const FINISH_RACE_BUTTON: SceneNavigationButton = {
@@ -67,12 +68,14 @@ interface AirplanePhysicsProfile {
 }
 
 const DEFAULT_AIRPLANE = getAirplanes()[0];
+const DEFAULT_WEATHER = getWeatherPresets()[0];
 
 function resolveRaceSceneData(data: RaceSceneData | undefined): Required<RaceSceneData> {
   return {
     airplaneId: data?.airplaneId ?? DEFAULT_AIRPLANE.id,
     airplaneName: data?.airplaneName ?? DEFAULT_AIRPLANE.name,
     airplaneStats: calculateFinalStats(data?.airplaneStats ?? DEFAULT_AIRPLANE.baseStats, []),
+    weather: data?.weather ?? selectWeather(getWeatherPresets(), Date.now()),
   };
 }
 
@@ -102,14 +105,30 @@ function formatSignedAngle(angle: number): string {
   return `${sign}${angle.toFixed(1)}°`;
 }
 
+function getWindArrow(weather: Weather): string {
+  if (weather.windStrength <= 0 || vectorMagnitude(weather.windDirection) === 0) {
+    return '·';
+  }
+
+  const arrowBySector = ['→', '↘', '↓', '↙', '←', '↖', '↑', '↗'] as const;
+  const angle = Math.atan2(weather.windDirection.y, weather.windDirection.x);
+  const normalizedTurns = ((angle / (Math.PI * 2)) + 1) % 1;
+  const sectorIndex = Math.round(normalizedTurns * arrowBySector.length) % arrowBySector.length;
+
+  return arrowBySector[sectorIndex];
+}
+
 export class RaceScene extends Phaser.Scene {
   private airplane?: Phaser.Physics.Matter.Image;
   private guideGraphics?: Phaser.GameObjects.Graphics;
   private trajectoryGraphics?: Phaser.GameObjects.Graphics;
   private statusText?: Phaser.GameObjects.Text;
   private finishButton?: Phaser.GameObjects.Text;
+  private weatherText?: Phaser.GameObjects.Text;
   private airplaneName = DEFAULT_AIRPLANE.name;
   private airplaneStats = DEFAULT_AIRPLANE.baseStats;
+  private weather = DEFAULT_WEATHER;
+  private currentRaceSceneData: Required<RaceSceneData> = resolveRaceSceneData(undefined);
   private airplanePhysicsProfile = createAirplanePhysicsProfile(DEFAULT_AIRPLANE.baseStats);
   private isDragging = false;
   private hasLaunched = false;
@@ -134,6 +153,8 @@ export class RaceScene extends Phaser.Scene {
 
     this.airplaneName = raceSceneData.airplaneName;
     this.airplaneStats = raceSceneData.airplaneStats;
+    this.weather = raceSceneData.weather;
+    this.currentRaceSceneData = raceSceneData;
     this.airplanePhysicsProfile = createAirplanePhysicsProfile(raceSceneData.airplaneStats);
     this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
     this.cameras.main.setBounds(0, 0, RACE_WORLD_WIDTH, GAME_HEIGHT);
@@ -154,7 +175,7 @@ export class RaceScene extends Phaser.Scene {
     this.resetAirplane();
   }
 
-  update(): void {
+  update(_time: number, delta: number): void {
     if (!this.airplane || !this.statusText || !this.hasLaunched || this.hasLanded) {
       return;
     }
@@ -170,6 +191,7 @@ export class RaceScene extends Phaser.Scene {
     });
 
     this.airplane.applyForce(toPhaserVector(aerodynamicForce));
+    this.airplane.applyForce(toPhaserVector(scaleVector(calculateWindEffect(this.weather, this.airplaneStats), delta / 1000)));
     this.airplane.setAngularVelocity(
       resolvePitchControlAngularVelocity({
         currentAngularVelocity: currentAngularVelocity * (1 - this.airplanePhysicsProfile.angularDamping),
@@ -201,13 +223,27 @@ export class RaceScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         48,
-        'Phase 1 · Step 2：属性映射发射力、阻力、稳定性与俯仰操控',
+        'Phase 1 · Step 3：天气风力会持续影响飞行，并在 HUD 中实时显示',
         SCENE_SUBTITLE_STYLE,
       )
       .setOrigin(0.5)
       .setScrollFactor(0);
+    this.weatherText = this.add
+      .text(
+        GAME_WIDTH - 24,
+        18,
+        `天气：${this.weather.displayName} ${getWindArrow(this.weather)} 风力 ${this.weather.windStrength}`,
+        SCENE_SUBTITLE_STYLE,
+      )
+      .setOrigin(1, 0)
+      .setScrollFactor(0);
     this.add
-      .text(24, GAME_HEIGHT - 18, `${formatStatsLabel(this.airplaneStats)}；按 R 可重置本次尝试。`, SCENE_HINT_STYLE)
+      .text(
+        24,
+        GAME_HEIGHT - 18,
+        `${formatStatsLabel(this.airplaneStats)}；当前天气：${this.weather.displayName}；按 R 可重置本次尝试。`,
+        SCENE_HINT_STYLE,
+      )
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
   }
@@ -326,7 +362,7 @@ export class RaceScene extends Phaser.Scene {
       this.finishRace();
     });
     this.input.keyboard?.on('keydown-R', () => {
-      this.scene.restart();
+      this.scene.restart(this.currentRaceSceneData);
     });
     this.bindPitchControlKey('UP', 'up');
     this.bindPitchControlKey('W', 'up');
@@ -492,14 +528,15 @@ export class RaceScene extends Phaser.Scene {
       score: score.totalScore,
       summary:
         reason === 'landed'
-          ? `${this.airplaneName} 原型验证完成：已接入属性驱动的发射力、阻力、稳定性与俯仰操控。`
-          : `${this.airplaneName} 原型验证完成：飞机越界后会结束本轮，并按飞行距离与滞空时间计分。`,
+          ? `${this.airplaneName} 原型验证完成：${this.weather.displayName}会持续施加风力，已可观察天气对飞行距离的影响。`
+          : `${this.airplaneName} 原型验证完成：${this.weather.displayName}会持续施加风力，飞机越界后会结束本轮并结算得分。`,
     };
 
     this.finishButton?.setAlpha(1);
     this.statusText.setText([
       `${reason === 'landed' ? '已着陆' : '已越界'}：飞行距离 ${distance}px · 滞空 ${(flightTimeMs / 1000).toFixed(2)}s`,
       `总分 ${score.totalScore}（距离 ${score.distanceScore} + 滞空 ${score.airtimeScore}）`,
+      `天气 ${this.weather.displayName} ${getWindArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
       '点击“进入结算”或按 Enter 继续。',
       '按 R 可重新回到本场景起点再次测试。',
     ]);
@@ -542,7 +579,8 @@ export class RaceScene extends Phaser.Scene {
     this.finishButton?.setAlpha(0.45);
     this.statusText.setText([
       '将纸飞机向后拖拽蓄力，松手即可发射。',
-      '发射后可轻触上/下半屏微调机头，并观察升力效果与相机跟随。',
+      `当前天气：${this.weather.displayName} ${getWindArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
+      '发射后可轻触上/下半屏微调机头，并观察升力、风力效果与相机跟随。',
       '目标：观察飞机着陆或越界后进入计分结算。',
     ]);
   }
