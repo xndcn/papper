@@ -65,11 +65,11 @@ export function applyBuff(buff: Buff, baseStats: AirplaneStats): AirplaneStats {
 }
 
 export function getActiveBuffs(buffs: readonly Buff[], currentTime: number): Buff[] {
-  return buffs.filter((buff) => !isBuffExpired(buff, currentTime));
+  return filterUnexpiredBuffs(buffs, currentTime);
 }
 
 export function removeExpiredBuffs(buffs: readonly Buff[], currentTime: number): Buff[] {
-  return buffs.filter((buff) => !isBuffExpired(buff, currentTime));
+  return filterUnexpiredBuffs(buffs, currentTime);
 }
 
 export function calculateBuffedStats(baseStats: AirplaneStats, activeBuffs: readonly Buff[]): AirplaneStats {
@@ -140,6 +140,10 @@ function isBuffExpired(buff: Buff, currentTime: number): boolean {
   return currentTime >= buff.startTime + buff.duration;
 }
 
+function filterUnexpiredBuffs(buffs: readonly Buff[], currentTime: number): Buff[] {
+  return buffs.filter((buff) => !isBuffExpired(buff, currentTime));
+}
+
 function getConflictGroupKey(buff: Buff): string {
   const affectedStats = AIRPLANE_STAT_KEYS.filter((statKey) => (buff.statModifiers[statKey] ?? 0) !== 0);
 
@@ -155,6 +159,7 @@ function getConflictGroupKey(buff: Buff): string {
 }
 
 function compareBuffPriority(nextBuff: Buff, currentBuff: Buff): number {
+  // 非叠加 Buff 冲突时，按“总修正值更高 → 持续时间更长 → id 字典序更大”依次取优。
   const modifierDifference = getBuffModifierScore(nextBuff) - getBuffModifierScore(currentBuff);
   if (modifierDifference !== 0) {
     return modifierDifference;
