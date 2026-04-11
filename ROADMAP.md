@@ -95,15 +95,15 @@
   - [x] 更新 `src/config/constants.ts`：新增 BUILD 场景 key 和流转关系
   - [x] 验证：可选择飞机、装卸零件、看到属性变化、点击出战进入比赛
 
-- [ ] **Step 5: AI 对手系统**
-  - [ ] 创建 `src/systems/OpponentAI.ts`：AI 决策纯逻辑模块
+- [x] **Step 5: AI 对手系统**
+  - [x] 创建 `src/systems/OpponentAI.ts`：AI 决策纯逻辑模块
     - `calculateAILaunchParams(opponent, weather)` — 根据性格和天气决定发射角度与力度（aggressive 偏好大力低角度，cautious 偏好中等力度中等角度）
     - `simulateOpponentFlight(launchParams, airplaneStats, weather, raceDuration)` — 简化飞行模拟：使用抛物线运动公式近似，基于发射参数和属性计算飞行距离与滞空时间（不做逐帧 Matter.js 物理，参考 PhysicsSystem 的力学公式简化计算）
     - `generateOpponentScore(flightResult)` — 生成 AI 的最终得分
-  - [ ] 更新 RaceScene：在发射阶段同时计算 AI 结果，飞行过程中显示 AI 飞机位置（用简化轨迹动画或进度指示器）
-  - [ ] 更新 ResultScene：展示排名对比（玩家 vs AI），显示双方得分和飞行数据
-  - [ ] 单元测试：AI 发射参数合理性、飞行距离与属性正相关、不同性格行为差异
-  - [ ] 验证：比赛中可看到 AI 对手存在感，结算时有明确的胜负排名
+  - [x] 更新 RaceScene：在发射阶段同时计算 AI 结果，飞行过程中显示 AI 飞机位置（用简化轨迹动画或进度指示器）
+  - [x] 更新 ResultScene：展示排名对比（玩家 vs AI），显示双方得分和飞行数据
+  - [x] 单元测试：AI 发射参数合理性、飞行距离与属性正相关、不同性格行为差异
+  - [x] 验证：比赛中可看到 AI 对手存在感，结算时有明确的胜负排名
 
 - [ ] **Step 6: 完整比赛流程与场景打磨**
   - [ ] BootScene 升级：显示游戏 Logo / 标题文字 + 最小化加载动画，自动过渡到 PreloadScene

@@ -8,8 +8,13 @@
 - 将 Phase 1 MVP 路线图从 9 个概要条目细化为 7 个 Step（共 40+ 子任务），每个 Step 包含具体的模块/文件、验证标准和测试要求，便于 Agent 逐步执行
 - MainMenuScene 与 RaceScene 现在会通过场景 data 传递所选基础机型属性，并将速度 / 滑翔 / 稳定 / 特技 / 耐久映射到发射、阻力、俯仰与碰撞物理参数
 - RaceScene 现在会在开局按权重选择天气预设，并在飞行阶段持续施加与稳定属性相关的风力效果，同时在 HUD 中显示天气名称与风向指示
+- ResultScene 现在会展示玩家与 AI 对手的 1v1 排名、得分、飞行距离、滞空时间与 AI 发射参数摘要
 
 ### 新增
+- Phase 1 Step 5 AI 对手系统：
+  - 新增 `src/systems/OpponentAI.ts` 与 `src/systems/OpponentAI.test.ts`，覆盖 AI 发射策略、简化飞行模拟与最终得分生成
+  - 更新 `RaceScene`：发射时同步生成 AI 结果，并在飞行 HUD 中显示对手信息与进度指示器
+  - 更新 `ResultScene` 与 `src/types/index.ts`：支持 1v1 排名结算、对手飞行数据与发射参数展示
 - Phase 1 Step 4 构建场景与零件装配：
   - 新增 `src/scenes/BuildScene.ts`，提供飞机选择、动态槽位、零件背包、天气预告与实时属性条预览
   - 新增 `src/systems/BuildSystem.ts` 与对应单元测试，覆盖兼容槽位过滤、零件装卸与构建属性预览

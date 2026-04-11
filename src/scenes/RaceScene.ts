@@ -11,7 +11,13 @@ import {
   SCENE_TITLE_STYLE,
 } from '@/config/constants';
 import { calculateFinalStats } from '@/systems/AirplaneStatsSystem';
-import { getAirplaneById, getAirplanes, getWeatherPresets } from '@/systems/ContentLoader';
+import { getAirplaneById, getAirplanes, getOpponentById, getOpponents, getParts, getWeatherPresets } from '@/systems/ContentLoader';
+import {
+  calculateAILaunchParams,
+  generateOpponentScore,
+  simulateOpponentFlight,
+  type AILaunchParams,
+} from '@/systems/OpponentAI';
 import {
   calculateAerodynamicForce,
   calculateAngleOfAttackDegrees,
@@ -27,8 +33,18 @@ import {
 } from '@/systems/PhysicsSystem';
 import { calculateFlightScore, isFlightOutOfBounds } from '@/systems/RaceSystem';
 import { calculateWindEffect, selectWeather } from '@/systems/WeatherSystem';
-import type { AirplaneStats, RaceSceneData, ResultSceneData, SceneNavigationButton, Weather } from '@/types';
-import { clamp, scaleVector, subtractVectors, vectorMagnitude, type Vector2Like } from '@/utils/math';
+import type {
+  AirplaneStats,
+  Opponent,
+  OpponentRaceResult,
+  Part,
+  RaceParticipantResult,
+  RaceSceneData,
+  ResultSceneData,
+  SceneNavigationButton,
+  Weather,
+} from '@/types';
+import { clamp, lerp, scaleVector, subtractVectors, vectorMagnitude, type Vector2Like } from '@/utils/math';
 
 const FINISH_RACE_BUTTON: SceneNavigationButton = {
   label: '进入结算',
@@ -53,6 +69,11 @@ const CAMERA_HORIZONTAL_OFFSET = -GAME_WIDTH * 0.18;
 const LAUNCH_FORCE_MULTIPLIER = 3.5;
 const FRICTION_AIR_SCALE = 0.1;
 const RESTITUTION_SCALE = 0.1;
+const AI_SIMULATION_DURATION_SECONDS = 8;
+const PROGRESS_TRACK_START_X = 164;
+const PROGRESS_TRACK_END_X = GAME_WIDTH - 44;
+const PROGRESS_TRACK_Y = 82;
+const MIN_PROGRESS_DENOMINATOR = 1;
 const FLIGHT_BOUNDS = {
   minX: 0,
   maxX: RACE_WORLD_WIDTH - 28,
@@ -69,6 +90,25 @@ interface AirplanePhysicsProfile {
 
 const DEFAULT_AIRPLANE = getAirplanes()[0];
 const DEFAULT_WEATHER = getWeatherPresets()[0];
+const DEFAULT_OPPONENT = getOpponents()[0];
+
+function getPartsByIds(partIds: readonly string[]): readonly Part[] {
+  const partsById = new Map(getParts().map((part) => [part.id, part] as const));
+
+  return partIds.flatMap((partId) => {
+    const part = partsById.get(partId);
+    return part ? [part] : [];
+  });
+}
+
+function resolveOpponentSetup(opponentId: string): { opponent: Opponent; stats: AirplaneStats } {
+  const opponent = getOpponentById(opponentId) ?? DEFAULT_OPPONENT;
+  const airplane = getAirplaneById(opponent.airplaneId) ?? DEFAULT_AIRPLANE;
+  return {
+    opponent,
+    stats: calculateFinalStats(airplane.baseStats, getPartsByIds(opponent.partIds)),
+  };
+}
 
 function resolveRaceSceneData(data: RaceSceneData | undefined): Required<RaceSceneData> {
   const resolvedAirplane = getAirplaneById(data?.airplaneId ?? DEFAULT_AIRPLANE.id) ?? DEFAULT_AIRPLANE;
@@ -80,6 +120,7 @@ function resolveRaceSceneData(data: RaceSceneData | undefined): Required<RaceSce
     airplaneStats: data?.airplaneStats ?? calculateFinalStats(resolvedAirplane.baseStats, equippedParts),
     equippedParts,
     weather: data?.weather ?? selectWeather(getWeatherPresets(), Date.now()),
+    opponentId: data?.opponentId ?? DEFAULT_OPPONENT.id,
   };
 }
 
@@ -122,6 +163,65 @@ function getWindArrow(weather: Weather): string {
   return arrowBySector[sectorIndex];
 }
 
+function formatOpponentPersonality(personality: Opponent['personality']): string {
+  switch (personality) {
+    case 'aggressive':
+      return '进攻型';
+    case 'balanced':
+      return '均衡型';
+    case 'cautious':
+      return '防守型';
+    case 'tricky':
+      return '花式型';
+  }
+}
+
+function rankParticipants(participants: readonly RaceParticipantResult[]): readonly RaceParticipantResult[] {
+  return [...participants].sort((left, right) => {
+    if (right.score !== left.score) {
+      return right.score - left.score;
+    }
+
+    if (right.distance !== left.distance) {
+      return right.distance - left.distance;
+    }
+
+    return right.flightTimeMs - left.flightTimeMs;
+  });
+}
+
+function generateRaceSummary({
+  airplaneName,
+  opponent,
+  opponentResult,
+  playerScore,
+  beatOpponent,
+  reason,
+  weather,
+}: {
+  readonly airplaneName: string;
+  readonly opponent: Opponent;
+  readonly opponentResult?: OpponentRaceResult;
+  readonly playerScore: number;
+  readonly beatOpponent: boolean;
+  readonly reason: 'landed' | 'out_of_bounds';
+  readonly weather: Weather;
+}): string {
+  if (opponentResult) {
+    if (beatOpponent) {
+      return `你以 ${playerScore} 分击败了 ${opponent.name}（${opponentResult.score} 分），${reason === 'landed' ? '成功完成落地结算。' : '虽然越界，但仍保住了领先。'}`;
+    }
+
+    return `${opponent.name} 以 ${opponentResult.score} 分领先，你获得 ${playerScore} 分。${reason === 'landed' ? '本轮已完成结算。' : '本轮因越界结束。'}`;
+  }
+
+  if (reason === 'landed') {
+    return `${airplaneName} 原型验证完成：${weather.displayName}会持续施加风力，已可观察天气对飞行距离的影响。`;
+  }
+
+  return `${airplaneName} 原型验证完成：${weather.displayName}会持续施加风力，飞机越界后会结束本轮并结算得分。`;
+}
+
 export class RaceScene extends Phaser.Scene {
   private airplane?: Phaser.Physics.Matter.Image;
   private guideGraphics?: Phaser.GameObjects.Graphics;
@@ -129,11 +229,18 @@ export class RaceScene extends Phaser.Scene {
   private statusText?: Phaser.GameObjects.Text;
   private finishButton?: Phaser.GameObjects.Text;
   private weatherText?: Phaser.GameObjects.Text;
+  private opponentText?: Phaser.GameObjects.Text;
+  private playerProgressMarker?: Phaser.GameObjects.Arc;
+  private opponentProgressMarker?: Phaser.GameObjects.Arc;
   private airplaneName = DEFAULT_AIRPLANE.name;
   private airplaneStats = DEFAULT_AIRPLANE.baseStats;
   private weather = DEFAULT_WEATHER;
+  private opponent = DEFAULT_OPPONENT;
+  private opponentStats = DEFAULT_AIRPLANE.baseStats;
   private currentRaceSceneData: Required<RaceSceneData> = resolveRaceSceneData(undefined);
   private airplanePhysicsProfile = createAirplanePhysicsProfile(DEFAULT_AIRPLANE.baseStats);
+  private opponentLaunchParams?: AILaunchParams;
+  private opponentResult?: OpponentRaceResult;
   private isDragging = false;
   private hasLaunched = false;
   private hasLanded = false;
@@ -146,6 +253,7 @@ export class RaceScene extends Phaser.Scene {
     flightTimeMs: 0,
     score: 0,
     summary: '请先完成一次拖拽发射。',
+    playerName: DEFAULT_AIRPLANE.name,
   };
 
   constructor() {
@@ -154,10 +262,13 @@ export class RaceScene extends Phaser.Scene {
 
   create(data?: RaceSceneData): void {
     const raceSceneData = resolveRaceSceneData(data);
+    const opponentSetup = resolveOpponentSetup(raceSceneData.opponentId);
 
     this.airplaneName = raceSceneData.airplaneName;
     this.airplaneStats = raceSceneData.airplaneStats;
     this.weather = raceSceneData.weather;
+    this.opponent = opponentSetup.opponent;
+    this.opponentStats = opponentSetup.stats;
     this.currentRaceSceneData = raceSceneData;
     this.airplanePhysicsProfile = createAirplanePhysicsProfile(raceSceneData.airplaneStats);
     this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
@@ -172,7 +283,7 @@ export class RaceScene extends Phaser.Scene {
     this.trajectoryGraphics = this.add.graphics();
     this.airplane = this.createAirplane();
     this.finishButton = this.createFinishButton();
-    this.statusText = this.add.text(24, 58, '', SCENE_SUBTITLE_STYLE).setScrollFactor(0);
+    this.statusText = this.add.text(24, 96, '', SCENE_SUBTITLE_STYLE).setScrollFactor(0);
 
     this.registerInput();
     this.registerCollisionListener();
@@ -213,11 +324,18 @@ export class RaceScene extends Phaser.Scene {
     this.maxFlightX = Math.max(this.maxFlightX, this.airplane.x);
     const angleOfAttack = calculateAngleOfAttackDegrees(this.airplane.rotation, velocity);
     const coefficients = getAerodynamicCoefficients(angleOfAttack);
+    const playerDistancePx = Math.max(0, this.airplane.x - this.launchStartX);
+    const opponentProjectedDistance = this.resolveAnimatedOpponentDistance(this.time.now - this.flightStartTime);
+
+    this.updateProgressMarkers(playerDistancePx, opponentProjectedDistance);
 
     this.statusText.setText([
       `速度 ${speed.toFixed(2)} px/s · 攻角 ${formatSignedAngle(angleOfAttack)}`,
       `升力系数 ${coefficients.lift.toFixed(2)} · 阻力系数 ${coefficients.drag.toFixed(3)}`,
       `飞行控制：${this.pitchDirection === 'neutral' ? '未输入' : this.pitchDirection === 'up' ? '抬头' : '压头'} · 上半屏抬头 / 下半屏压头`,
+      this.opponentResult
+        ? `对手 ${this.opponent.name}：${formatOpponentPersonality(this.opponent.personality)} · 当前进度 ${Math.round(opponentProjectedDistance)}px / 目标 ${this.opponentResult.distance}px`
+        : `对手 ${this.opponent.name}：等待同步起飞`,
     ]);
   }
 
@@ -227,10 +345,18 @@ export class RaceScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         48,
-        'Phase 1 · Step 3：天气风力会持续影响飞行，并在 HUD 中实时显示',
+        'Phase 1 · Step 5：AI 对手会根据天气决策发射，并在 HUD 中显示进度对比',
         SCENE_SUBTITLE_STYLE,
       )
       .setOrigin(0.5)
+      .setScrollFactor(0);
+    this.opponentText = this.add
+      .text(
+        24,
+        62,
+        `对手：${this.opponent.name} · ${this.opponent.title} · ${formatOpponentPersonality(this.opponent.personality)}`,
+        SCENE_SUBTITLE_STYLE,
+      )
       .setScrollFactor(0);
     this.weatherText = this.add
       .text(
@@ -241,6 +367,19 @@ export class RaceScene extends Phaser.Scene {
       )
       .setOrigin(1, 0)
       .setScrollFactor(0);
+    this.add.text(24, PROGRESS_TRACK_Y, '你', SCENE_HINT_STYLE).setOrigin(0, 0.5).setScrollFactor(0);
+    this.add.text(132, PROGRESS_TRACK_Y, 'AI', SCENE_HINT_STYLE).setOrigin(0, 0.5).setScrollFactor(0);
+    this.add.rectangle(
+      (PROGRESS_TRACK_START_X + PROGRESS_TRACK_END_X) / 2,
+      PROGRESS_TRACK_Y,
+      PROGRESS_TRACK_END_X - PROGRESS_TRACK_START_X,
+      4,
+      0x334155,
+    )
+      .setScrollFactor(0)
+      .setOrigin(0.5);
+    this.playerProgressMarker = this.add.circle(PROGRESS_TRACK_START_X, PROGRESS_TRACK_Y, 4, 0xf8fafc).setScrollFactor(0);
+    this.opponentProgressMarker = this.add.circle(PROGRESS_TRACK_START_X, PROGRESS_TRACK_Y, 4, 0xf59e0b).setScrollFactor(0);
     this.add
       .text(
         24,
@@ -488,6 +627,25 @@ export class RaceScene extends Phaser.Scene {
       return;
     }
 
+    this.opponentLaunchParams = calculateAILaunchParams(this.opponent, this.weather);
+    const simulatedOpponentFlight = simulateOpponentFlight(
+      this.opponentLaunchParams,
+      this.opponentStats,
+      this.weather,
+      AI_SIMULATION_DURATION_SECONDS,
+    );
+    const simulatedOpponentScore = generateOpponentScore(simulatedOpponentFlight);
+    this.opponentResult = {
+      id: this.opponent.id,
+      name: this.opponent.name,
+      title: this.opponent.title,
+      personality: this.opponent.personality,
+      distance: simulatedOpponentFlight.distancePx,
+      flightTimeMs: simulatedOpponentFlight.flightTimeMs,
+      score: simulatedOpponentScore.totalScore,
+      launchAngleDegrees: this.opponentLaunchParams.angleDegrees,
+      launchPower: this.opponentLaunchParams.power,
+    };
     this.hasLaunched = true;
     this.flightStartTime = this.time.now;
     this.launchStartX = this.airplane.x;
@@ -505,10 +663,34 @@ export class RaceScene extends Phaser.Scene {
     this.airplane.setStatic(false);
     this.airplane.setAngularVelocity(0);
     this.airplane.applyForce(toPhaserVector(scaleVector(launch.force, LAUNCH_FORCE_MULTIPLIER)));
+    this.updateProgressMarkers(0, 0);
   }
 
   private updatePitchDirection(pointer: Phaser.Input.Pointer): void {
     this.pitchDirection = pointer.y <= GAME_HEIGHT / 2 ? 'up' : 'down';
+  }
+
+  private resolveAnimatedOpponentDistance(elapsedMs: number): number {
+    if (!this.opponentResult) {
+      return 0;
+    }
+
+    const progress = clamp(elapsedMs / Math.max(this.opponentResult.flightTimeMs, 1), 0, 1);
+    return this.opponentResult.distance * progress;
+  }
+
+  private updateProgressMarkers(playerDistance: number, opponentDistance: number): void {
+    const maxDistance = Math.max(
+      MIN_PROGRESS_DENOMINATOR,
+      playerDistance,
+      opponentDistance,
+      this.opponentResult?.distance ?? 0,
+    );
+    const playerProgress = clamp(playerDistance / maxDistance, 0, 1);
+    const opponentProgress = clamp(opponentDistance / maxDistance, 0, 1);
+
+    this.playerProgressMarker?.setX(lerp(PROGRESS_TRACK_START_X, PROGRESS_TRACK_END_X, playerProgress));
+    this.opponentProgressMarker?.setX(lerp(PROGRESS_TRACK_START_X, PROGRESS_TRACK_END_X, opponentProgress));
   }
 
   private handleLanding(reason: 'landed' | 'out_of_bounds' = 'landed'): void {
@@ -525,21 +707,46 @@ export class RaceScene extends Phaser.Scene {
     const distance = Math.max(0, Math.round(this.maxFlightX - this.launchStartX));
     const flightTimeMs = Math.max(0, Math.round(this.time.now - this.flightStartTime));
     const score = calculateFlightScore({ distancePx: distance, flightTimeMs });
+    const playerResult: RaceParticipantResult = {
+      name: `你 · ${this.airplaneName}`,
+      distance,
+      flightTimeMs,
+      score: score.totalScore,
+      isPlayer: true,
+    };
+    const rankings = rankParticipants(
+      this.opponentResult ? [playerResult, this.opponentResult] : [playerResult],
+    );
+    const playerRank = rankings.findIndex((entry) => entry.isPlayer) + 1;
+    const hasOpponent = this.opponentResult !== undefined;
+    const beatOpponent = hasOpponent && playerRank === 1;
 
     this.resultData = {
       distance,
       flightTimeMs,
       score: score.totalScore,
-      summary:
-        reason === 'landed'
-          ? `${this.airplaneName} 原型验证完成：${this.weather.displayName}会持续施加风力，已可观察天气对飞行距离的影响。`
-          : `${this.airplaneName} 原型验证完成：${this.weather.displayName}会持续施加风力，飞机越界后会结束本轮并结算得分。`,
+      playerName: this.airplaneName,
+      opponentResult: this.opponentResult,
+      rankings,
+      summary: generateRaceSummary({
+        airplaneName: this.airplaneName,
+        opponent: this.opponent,
+        opponentResult: this.opponentResult,
+        playerScore: score.totalScore,
+        beatOpponent,
+        reason,
+        weather: this.weather,
+      }),
     };
 
     this.finishButton?.setAlpha(1);
+    this.updateProgressMarkers(distance, this.opponentResult?.distance ?? 0);
     this.statusText.setText([
       `${reason === 'landed' ? '已着陆' : '已越界'}：飞行距离 ${distance}px · 滞空 ${(flightTimeMs / 1000).toFixed(2)}s`,
       `总分 ${score.totalScore}（距离 ${score.distanceScore} + 滞空 ${score.airtimeScore}）`,
+      this.opponentResult
+        ? `对手 ${this.opponent.name}：${this.opponentResult.score} 分 · 距离 ${this.opponentResult.distance}px · 滞空 ${(this.opponentResult.flightTimeMs / 1000).toFixed(2)}s`
+        : '本轮未生成对手数据。',
       `天气 ${this.weather.displayName} ${getWindArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
       '点击“进入结算”或按 Enter 继续。',
       '按 R 可重新回到本场景起点再次测试。',
@@ -567,6 +774,8 @@ export class RaceScene extends Phaser.Scene {
     this.isDragging = false;
     this.hasLaunched = false;
     this.hasLanded = false;
+    this.opponentLaunchParams = undefined;
+    this.opponentResult = undefined;
     this.launchStartX = LAUNCH_ANCHOR.x;
     this.maxFlightX = LAUNCH_ANCHOR.x;
     this.pitchDirection = 'neutral';
@@ -581,11 +790,13 @@ export class RaceScene extends Phaser.Scene {
     this.guideGraphics?.clear();
     this.trajectoryGraphics?.clear();
     this.finishButton?.setAlpha(0.45);
+    this.updateProgressMarkers(0, 0);
     this.statusText.setText([
       '将纸飞机向后拖拽蓄力，松手即可发射。',
+      `对手 ${this.opponent.name}（${formatOpponentPersonality(this.opponent.personality)}）会同步起飞并给出预估成绩。`,
       `当前天气：${this.weather.displayName} ${getWindArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
-      '发射后可轻触上/下半屏微调机头，并观察升力、风力效果与相机跟随。',
-      '目标：观察飞机着陆或越界后进入计分结算。',
+      '发射后可轻触上/下半屏微调机头，并观察升力、风力效果、AI 进度与相机跟随。',
+      '目标：观察飞机着陆或越界后进入带排名的计分结算。',
     ]);
   }
 }

@@ -109,6 +109,9 @@ export interface ResultSceneData {
   readonly flightTimeMs: number;
   readonly score: number;
   readonly summary: string;
+  readonly playerName?: string;
+  readonly opponentResult?: OpponentRaceResult;
+  readonly rankings?: readonly RaceParticipantResult[];
 }
 
 export interface BuildSceneData {
@@ -121,4 +124,21 @@ export interface RaceSceneData {
   readonly airplaneStats?: AirplaneStats;
   readonly equippedParts?: readonly Part[];
   readonly weather?: Weather;
+  readonly opponentId?: string;
+}
+
+export interface RaceParticipantResult {
+  readonly name: string;
+  readonly distance: number;
+  readonly flightTimeMs: number;
+  readonly score: number;
+  readonly isPlayer?: boolean;
+}
+
+export interface OpponentRaceResult extends RaceParticipantResult {
+  readonly id: string;
+  readonly title: string;
+  readonly personality: OpponentPersonality;
+  readonly launchAngleDegrees: number;
+  readonly launchPower: number;
 }
