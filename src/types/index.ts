@@ -115,4 +115,5 @@ export interface RaceSceneData {
   readonly airplaneId?: string;
   readonly airplaneName?: string;
   readonly airplaneStats?: AirplaneStats;
+  readonly weather?: Weather;
 }

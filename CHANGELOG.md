@@ -7,8 +7,12 @@
 ### 变更
 - 将 Phase 1 MVP 路线图从 9 个概要条目细化为 7 个 Step（共 40+ 子任务），每个 Step 包含具体的模块/文件、验证标准和测试要求，便于 Agent 逐步执行
 - MainMenuScene 与 RaceScene 现在会通过场景 data 传递所选基础机型属性，并将速度 / 滑翔 / 稳定 / 特技 / 耐久映射到发射、阻力、俯仰与碰撞物理参数
+- RaceScene 现在会在开局按权重选择天气预设，并在飞行阶段持续施加与稳定属性相关的风力效果，同时在 HUD 中显示天气名称与风向指示
 
 ### 新增
+- Phase 1 Step 3 基础天气系统：
+  - 新增 `src/systems/WeatherSystem.ts` 与 `src/systems/WeatherSystem.test.ts`，覆盖风向向量、稳定属性减风与带 seed 的加权天气选择
+  - RaceScene 接入天气数据流、风力外力与天气 HUD，按 `R` 重开时会保留当前飞机与天气配置
 - Phase 1 Step 2 飞机属性驱动物理系统：
   - 为 `src/systems/PhysicsSystem.ts` 新增属性到发射力、阻力系数、角速度阻尼、俯仰上限、碰撞保速的映射函数
   - 新增 `src/systems/AirplaneStatsSystem.ts` 与对应单元测试，支持基础属性与零件修正叠加并 clamp 到合法范围
