@@ -395,15 +395,23 @@ function parseSkillEffectValue(
   effectType: SkillEffect['type'],
   path: string,
 ): Partial<AirplaneStats> | number {
-  if (effectType === 'stat_boost') {
-    return parsePartialAirplaneStats(value, path);
-  }
+  switch (effectType) {
+    case 'stat_boost':
+      return parsePartialAirplaneStats(value, path);
+    case 'force_apply':
+    case 'damage_reduce':
+      return expectNumber(value, path);
+    case 'special':
+      if (typeof value === 'number') {
+        return expectNumber(value, path);
+      }
 
-  if (typeof value === 'number') {
-    return expectNumber(value, path);
-  }
+      if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+        return parsePartialAirplaneStats(value, path);
+      }
 
-  return parsePartialAirplaneStats(value, path);
+      throw new TypeError(`${path} must be a valid number or stat modifier object`);
+  }
 }
 
 function parseVector2(value: unknown, path: string): Vector2 {
@@ -472,13 +480,14 @@ function createPartsBySlotMap(parts: readonly Part[]): ReadonlyMap<PartSlot, rea
 }
 
 function createSkillsByTypeMap(skills: readonly Skill[]): ReadonlyMap<SkillType, readonly Skill[]> {
-  const skillsByType = new Map<SkillType, Skill[]>(SKILL_TYPES.map((type) => [type, []]));
+  const skillsByType = new Map<SkillType, readonly Skill[]>(SKILL_TYPES.map((type) => [type, [] as readonly Skill[]]));
 
   for (const skill of skills) {
-    skillsByType.get(skill.type)?.push(skill);
+    const typedSkills = skillsByType.get(skill.type) ?? [];
+    skillsByType.set(skill.type, [...typedSkills, skill]);
   }
 
-  return new Map(Array.from(skillsByType.entries(), ([type, typedSkills]) => [type, typedSkills as readonly Skill[]]));
+  return skillsByType;
 }
 
 function createWeatherByConditionMap(weatherPresets: readonly Weather[]): ReadonlyMap<WeatherCondition, Weather> {
