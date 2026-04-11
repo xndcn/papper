@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### 变更
+- 将 Phase 2 Roguelike 循环路线图从 7 个概要条目细化为 8 个 Step（共 70+ 子任务），每个 Step 包含具体的模块/文件、函数签名、验证标准和测试要求，便于 Agent 逐步执行
 - 完成 Phase 1 Step 7 收尾：补齐 PhysicsSystem 的自动滑翔姿态对齐测试，验证覆盖率 / lint / build，并完成 Playwright 触屏交互回归
 - RaceScene 现在在玩家松开触控后会自动顺着速度方向调整机头，并提升玩家发射力度，使单次飞行距离与滞空时间更接近 AI 对手的比赛节奏
 - RaceScene、MainMenuScene、BuildScene 与 ResultScene 统一强化了移动端文案与触控路径提示，RaceScene 额外加入“重新试飞”按钮，移动端无需键盘即可完成完整闭环
