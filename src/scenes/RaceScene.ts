@@ -303,6 +303,7 @@ export class RaceScene extends Phaser.Scene {
 
     const velocity = this.airplane.body?.velocity ?? { x: 0, y: 0 };
     const currentAngularVelocity = this.airplane.body?.angularVelocity ?? 0;
+    // First apply stability damping, then layer either auto-glide alignment or active pitch input on top.
     const dampedAngularVelocity = currentAngularVelocity * (1 - this.airplanePhysicsProfile.angularDamping);
     let airplaneAngleRadians = this.airplane.rotation;
 
@@ -356,7 +357,8 @@ export class RaceScene extends Phaser.Scene {
     this.statusText.setText([
       `速度 ${speed.toFixed(2)} px/s · 攻角 ${formatSignedAngle(angleOfAttack)}`,
       `升力系数 ${coefficients.lift.toFixed(2)} · 阻力系数 ${coefficients.drag.toFixed(3)}`,
-      `飞行控制：${this.pitchDirection === 'neutral' ? '自动滑翔' : this.pitchDirection === 'up' ? '抬头' : '压头'} · 轻触并按住上/下半屏微调，松开后自动顺着速度方向滑翔`,
+      `飞行控制：${this.pitchDirection === 'neutral' ? '自动滑翔' : this.pitchDirection === 'up' ? '抬头' : '压头'}`,
+      '轻触并按住上/下半屏微调，松开后自动顺着速度方向滑翔',
       this.opponentResult
         ? `对手 ${this.opponent.name}：${formatOpponentPersonality(this.opponent.personality)} · 当前进度 ${Math.round(opponentProjectedDistance)}px / 目标 ${this.opponentResult.distance}px`
         : `对手 ${this.opponent.name}：等待同步起飞`,
