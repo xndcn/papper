@@ -21,7 +21,7 @@ import {
 } from '@/systems/PhysicsSystem';
 import { calculateFlightScore, isFlightOutOfBounds } from '@/systems/RaceSystem';
 import type { ResultSceneData, SceneNavigationButton } from '@/types';
-import { clamp, subtractVectors, vectorMagnitude, type Vector2Like } from '@/utils/math';
+import { clamp, scaleVector, subtractVectors, vectorMagnitude, type Vector2Like } from '@/utils/math';
 
 const FINISH_RACE_BUTTON: SceneNavigationButton = {
   label: '进入结算',
@@ -38,6 +38,7 @@ const GROUND_HEIGHT = 34;
 const GROUND_TOP_Y = GAME_HEIGHT - GROUND_HEIGHT;
 const PLANE_PICK_RADIUS = 28;
 const RACE_WORLD_WIDTH = 2200;
+// Scene-level tuning is intentionally higher than PhysicsSystem defaults so Step 4 feels readable in-browser.
 const LIFT_FORCE_MULTIPLIER = 0.00009;
 const DRAG_FORCE_MULTIPLIER = 0.00002;
 const MIN_AERODYNAMIC_SPEED = 1.4;
@@ -245,6 +246,15 @@ export class RaceScene extends Phaser.Scene {
       });
   }
 
+  private bindPitchControlKey(key: string, direction: PitchControlDirection): void {
+    this.input.keyboard?.on(`keydown-${key}`, () => {
+      this.pitchDirection = direction;
+    });
+    this.input.keyboard?.on(`keyup-${key}`, () => {
+      this.pitchDirection = 'neutral';
+    });
+  }
+
   private registerInput(): void {
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.hasLaunched && !this.hasLanded) {
@@ -272,30 +282,10 @@ export class RaceScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-R', () => {
       this.scene.restart();
     });
-    this.input.keyboard?.on('keydown-UP', () => {
-      this.pitchDirection = 'up';
-    });
-    this.input.keyboard?.on('keydown-W', () => {
-      this.pitchDirection = 'up';
-    });
-    this.input.keyboard?.on('keydown-DOWN', () => {
-      this.pitchDirection = 'down';
-    });
-    this.input.keyboard?.on('keydown-S', () => {
-      this.pitchDirection = 'down';
-    });
-    this.input.keyboard?.on('keyup-UP', () => {
-      this.pitchDirection = 'neutral';
-    });
-    this.input.keyboard?.on('keyup-W', () => {
-      this.pitchDirection = 'neutral';
-    });
-    this.input.keyboard?.on('keyup-DOWN', () => {
-      this.pitchDirection = 'neutral';
-    });
-    this.input.keyboard?.on('keyup-S', () => {
-      this.pitchDirection = 'neutral';
-    });
+    this.bindPitchControlKey('UP', 'up');
+    this.bindPitchControlKey('W', 'up');
+    this.bindPitchControlKey('DOWN', 'down');
+    this.bindPitchControlKey('S', 'down');
   }
 
   private registerCollisionListener(): void {
@@ -428,12 +418,7 @@ export class RaceScene extends Phaser.Scene {
     this.trajectoryGraphics?.clear();
     this.airplane.setStatic(false);
     this.airplane.setAngularVelocity(0);
-    this.airplane.applyForce(
-      toPhaserVector({
-        x: launch.force.x * LAUNCH_FORCE_MULTIPLIER,
-        y: launch.force.y * LAUNCH_FORCE_MULTIPLIER,
-      }),
-    );
+    this.airplane.applyForce(toPhaserVector(scaleVector(launch.force, LAUNCH_FORCE_MULTIPLIER)));
   }
 
   private updatePitchDirection(pointer: Phaser.Input.Pointer): void {

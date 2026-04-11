@@ -20,13 +20,13 @@ export interface FlightBounds {
   readonly maxY: number;
 }
 
-const AIRTIME_SCORE_PER_SECOND = 100;
+const DEFAULT_AIRTIME_SCORE_PER_SECOND = 100;
 
 export function calculateFlightScore({ distancePx, flightTimeMs }: FlightScoreInput): FlightScoreResult {
   const normalizedDistancePx = Math.max(0, Math.round(distancePx));
   const normalizedFlightTimeMs = Math.max(0, Math.round(flightTimeMs));
   const distanceScore = normalizedDistancePx;
-  const airtimeScore = Math.round((normalizedFlightTimeMs / 1000) * AIRTIME_SCORE_PER_SECOND);
+  const airtimeScore = Math.round((normalizedFlightTimeMs / 1000) * DEFAULT_AIRTIME_SCORE_PER_SECOND);
 
   return {
     distancePx: normalizedDistancePx,

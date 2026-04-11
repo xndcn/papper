@@ -68,9 +68,12 @@ const DEFAULT_TRAJECTORY_VELOCITY_SCALE = 22000;
 const DEFAULT_TRAJECTORY_GRAVITY_SCALE = 320;
 const MIN_AERO_ANGLE = -10;
 const MAX_AERO_ANGLE = 45;
+// Minimum body speed below which lift/drag are ignored to avoid micro-jitter near rest.
 const DEFAULT_MIN_AERODYNAMIC_SPEED = 0.1;
+// Prototype aerodynamic tuning used by the pure force helper before scene-level balancing.
 const DEFAULT_LIFT_MULTIPLIER = 0.00004;
 const DEFAULT_DRAG_MULTIPLIER = 0.000025;
+// Per-frame angular velocity adjustment applied by pitch control input.
 const DEFAULT_PITCH_STEP = 0.004;
 const DEFAULT_MAX_ANGULAR_VELOCITY = 0.06;
 
