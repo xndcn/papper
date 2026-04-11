@@ -11,7 +11,7 @@ import {
   SCENE_TITLE_STYLE,
 } from '@/config/constants';
 import { calculateFinalStats } from '@/systems/AirplaneStatsSystem';
-import { getAirplanes, getWeatherPresets } from '@/systems/ContentLoader';
+import { getAirplaneById, getAirplanes, getWeatherPresets } from '@/systems/ContentLoader';
 import {
   calculateAerodynamicForce,
   calculateAngleOfAttackDegrees,
@@ -71,10 +71,14 @@ const DEFAULT_AIRPLANE = getAirplanes()[0];
 const DEFAULT_WEATHER = getWeatherPresets()[0];
 
 function resolveRaceSceneData(data: RaceSceneData | undefined): Required<RaceSceneData> {
+  const resolvedAirplane = getAirplaneById(data?.airplaneId ?? DEFAULT_AIRPLANE.id) ?? DEFAULT_AIRPLANE;
+  const equippedParts = data?.equippedParts ?? [];
+
   return {
-    airplaneId: data?.airplaneId ?? DEFAULT_AIRPLANE.id,
-    airplaneName: data?.airplaneName ?? DEFAULT_AIRPLANE.name,
-    airplaneStats: calculateFinalStats(data?.airplaneStats ?? DEFAULT_AIRPLANE.baseStats, []),
+    airplaneId: data?.airplaneId ?? resolvedAirplane.id,
+    airplaneName: data?.airplaneName ?? resolvedAirplane.name,
+    airplaneStats: data?.airplaneStats ?? calculateFinalStats(resolvedAirplane.baseStats, equippedParts),
+    equippedParts,
     weather: data?.weather ?? selectWeather(getWeatherPresets(), Date.now()),
   };
 }
