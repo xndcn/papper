@@ -107,6 +107,18 @@ describe('PhysicsSystem', () => {
     ).toBeCloseTo(0.4);
   });
 
+  it('uses the shortest angular path when glide alignment crosses the wrap boundary', () => {
+    const wrappedRotation = resolveGlideAlignmentRotation({
+      currentRotationRadians: Math.PI * 1.95,
+      velocity: { x: 6, y: -0.3 },
+      stabilityStat: 10,
+      deltaMs: 100,
+    });
+
+    expect(wrappedRotation).toBeGreaterThan(Math.PI * 1.95);
+    expect(wrappedRotation - Math.PI * 1.95).toBeLessThan(0.5);
+  });
+
   it('maps airplane stats into physical tuning values', () => {
     const slowLaunchForce = calculateStatBasedLaunchForce(1, 1, 0);
     const fastLaunchForce = calculateStatBasedLaunchForce(10, 1, 0);

@@ -313,7 +313,7 @@ export class RaceScene extends Phaser.Scene {
         deltaMs: delta,
       });
       this.airplane.setRotation(airplaneAngleRadians);
-      this.airplane.setAngularVelocity(0);
+      this.airplane.setAngularVelocity(currentAngularVelocity * (1 - this.airplanePhysicsProfile.angularDamping));
     } else {
       this.airplane.setAngularVelocity(
         resolvePitchControlAngularVelocity({
