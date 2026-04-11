@@ -2,6 +2,8 @@ export const GAME_WIDTH = 480;
 export const GAME_HEIGHT = 270;
 export const GAME_BACKGROUND_COLOR = '#0f172a';
 export const GAME_GRAVITY = { x: 0, y: 0.5 } as const;
+export const MIN_STAT_VALUE = 1;
+export const MAX_STAT_VALUE = 10;
 
 export const GAME_CENTER_X = GAME_WIDTH / 2;
 export const GAME_CENTER_Y = GAME_HEIGHT / 2;

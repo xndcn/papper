@@ -110,3 +110,9 @@ export interface ResultSceneData {
   readonly score: number;
   readonly summary: string;
 }
+
+export interface RaceSceneData {
+  readonly airplaneId?: string;
+  readonly airplaneName?: string;
+  readonly airplaneStats?: AirplaneStats;
+}

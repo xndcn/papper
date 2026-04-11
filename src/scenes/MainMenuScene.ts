@@ -10,14 +10,25 @@ import {
   SCENE_SUBTITLE_STYLE,
   SCENE_TITLE_STYLE,
 } from '@/config/constants';
-import type { SceneNavigationButton } from '@/types';
+import { getAirplanes } from '@/systems/ContentLoader';
+import type { Airplane, RaceSceneData, SceneNavigationButton } from '@/types';
 
 const START_RACE_BUTTON: SceneNavigationButton = {
   label: '开始比赛',
   target: SCENE_KEYS.RACE,
 };
 
+function formatStatsLabel(airplane: Airplane): string {
+  const { speed, glide, stability, trick, durability } = airplane.baseStats;
+  return `速度 ${speed} · 滑翔 ${glide} · 稳定 ${stability} · 特技 ${trick} · 耐久 ${durability}`;
+}
+
 export class MainMenuScene extends Phaser.Scene {
+  private readonly airplanes = getAirplanes();
+  private selectedAirplaneIndex = 0;
+  private selectedAirplaneNameText?: Phaser.GameObjects.Text;
+  private selectedAirplaneStatsText?: Phaser.GameObjects.Text;
+
   constructor() {
     super(SCENE_KEYS.MAIN_MENU);
   }
@@ -29,27 +40,74 @@ export class MainMenuScene extends Phaser.Scene {
     this.add
       .text(
         GAME_CENTER_X,
-        GAME_CENTER_Y - 22,
-        'Step 4：MainMenu → 发射 → 飞行控制 → 着陆/越界计分 → Result',
+        GAME_CENTER_Y - 28,
+        'Phase 1 · Step 2：选择基础机型，比较属性驱动的飞行手感',
         SCENE_SUBTITLE_STYLE,
       )
       .setOrigin(0.5);
 
+    this.selectedAirplaneNameText = this.add.text(GAME_CENTER_X, GAME_CENTER_Y - 2, '', SCENE_TITLE_STYLE).setOrigin(0.5);
+    this.selectedAirplaneStatsText = this.add
+      .text(GAME_CENTER_X, GAME_CENTER_Y + 24, '', SCENE_SUBTITLE_STYLE)
+      .setOrigin(0.5);
+
+    const previousButton = this.add
+      .text(GAME_CENTER_X - 126, GAME_CENTER_Y - 2, '←', SCENE_BUTTON_STYLE)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    const nextButton = this.add
+      .text(GAME_CENTER_X + 126, GAME_CENTER_Y - 2, '→', SCENE_BUTTON_STYLE)
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
     const startButton = this.add
-      .text(GAME_CENTER_X, GAME_CENTER_Y + 20, START_RACE_BUTTON.label, SCENE_BUTTON_STYLE)
+      .text(GAME_CENTER_X, GAME_CENTER_Y + 62, START_RACE_BUTTON.label, SCENE_BUTTON_STYLE)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
     startButton.on('pointerdown', () => {
-      this.scene.start(START_RACE_BUTTON.target);
+      this.scene.start(START_RACE_BUTTON.target, this.createRaceSceneData());
     });
+    previousButton.on('pointerdown', () => this.cycleAirplane(-1));
+    nextButton.on('pointerdown', () => this.cycleAirplane(1));
 
-    this.input.keyboard?.once('keydown-ENTER', () => {
-      this.scene.start(START_RACE_BUTTON.target);
+    this.input.keyboard?.on('keydown-LEFT', () => {
+      this.cycleAirplane(-1);
+    });
+    this.input.keyboard?.on('keydown-RIGHT', () => {
+      this.cycleAirplane(1);
+    });
+    this.input.keyboard?.on('keydown-ENTER', () => {
+      this.scene.start(START_RACE_BUTTON.target, this.createRaceSceneData());
     });
 
     this.add
-      .text(GAME_CENTER_X, GAME_CENTER_Y + 58, '点击按钮或按 Enter 进入 RaceScene', SCENE_HINT_STYLE)
+      .text(GAME_CENTER_X, GAME_CENTER_Y + 104, '点击箭头或按 ← / → 切换飞机，按 Enter 开始比赛', SCENE_HINT_STYLE)
       .setOrigin(0.5);
+
+    this.refreshSelection();
+  }
+
+  private createRaceSceneData(): RaceSceneData {
+    const airplane = this.airplanes[this.selectedAirplaneIndex];
+
+    return {
+      airplaneId: airplane.id,
+      airplaneName: airplane.name,
+      airplaneStats: airplane.baseStats,
+    };
+  }
+
+  private cycleAirplane(direction: -1 | 1): void {
+    this.selectedAirplaneIndex =
+      (this.selectedAirplaneIndex + direction + this.airplanes.length) % this.airplanes.length;
+    this.refreshSelection();
+  }
+
+  private refreshSelection(): void {
+    const airplane = this.airplanes[this.selectedAirplaneIndex];
+
+    this.selectedAirplaneNameText?.setText(airplane.name);
+    this.selectedAirplaneStatsText?.setText(formatStatsLabel(airplane));
   }
 }
