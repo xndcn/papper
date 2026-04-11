@@ -1,0 +1,52 @@
+{
+  "weatherPresets": [
+    {
+      "id": "calm_day",
+      "condition": "calm",
+      "windDirection": { "x": 0, "y": 0 },
+      "windStrength": 0,
+      "effects": {
+        "speedModifier": 1,
+        "glideModifier": 1,
+        "stabilityModifier": 1,
+        "visibilityRange": 1000,
+        "turbulenceIntensity": 0
+      },
+      "displayName": "风和日丽",
+      "description": "晴朗无风，最适合熟悉基础发射与俯仰控制。",
+      "weight": 40
+    },
+    {
+      "id": "gentle_tailwind",
+      "condition": "tailwind",
+      "windDirection": { "x": 1, "y": 0 },
+      "windStrength": 3,
+      "effects": {
+        "speedModifier": 1.15,
+        "glideModifier": 1.1,
+        "stabilityModifier": 1,
+        "visibilityRange": 920,
+        "turbulenceIntensity": 0.05
+      },
+      "displayName": "微风顺吹",
+      "description": "柔和顺风会放大高速机型的直线冲刺优势。",
+      "weight": 35
+    },
+    {
+      "id": "strong_headwind",
+      "condition": "headwind",
+      "windDirection": { "x": -1, "y": -0.2 },
+      "windStrength": 7,
+      "effects": {
+        "speedModifier": 0.75,
+        "glideModifier": 0.82,
+        "stabilityModifier": 0.88,
+        "visibilityRange": 720,
+        "turbulenceIntensity": 0.2
+      },
+      "displayName": "强劲逆风",
+      "description": "逆风会压缩飞行距离，更考验稳定与姿态控制。",
+      "weight": 25
+    }
+  ]
+}

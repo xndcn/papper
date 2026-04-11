@@ -1,0 +1,76 @@
+{
+  "airplanes": [
+    {
+      "id": "classic_dart",
+      "name": "经典飞镖",
+      "nameEn": "Classic Dart",
+      "type": "speed",
+      "description": "最基础的纸飞机，发射快、穿风稳，适合追求直线冲刺的选手。",
+      "baseStats": {
+        "speed": 7,
+        "glide": 4,
+        "stability": 5,
+        "trick": 3,
+        "durability": 6
+      },
+      "slots": ["nose", "wing", "tail", "coating"],
+      "specialAbility": "疾风起跑：发射后的短时间内更容易维持高速姿态。",
+      "foldingSteps": [
+        { "stepNumber": 1, "instruction": "将纸张纵向对折后展开。", "spriteFrame": "dart_step_1" },
+        { "stepNumber": 2, "instruction": "将上方两角折向中线。", "spriteFrame": "dart_step_2" },
+        { "stepNumber": 3, "instruction": "再次沿中线收紧机身。", "spriteFrame": "dart_step_3" },
+        { "stepNumber": 4, "instruction": "对折并展开两侧机翼。", "spriteFrame": "dart_step_4" }
+      ],
+      "unlockCondition": "初始解锁",
+      "spriteKey": "airplane_classic_dart"
+    },
+    {
+      "id": "classic_glider",
+      "name": "经典滑翔机",
+      "nameEn": "Classic Glider",
+      "type": "stability",
+      "description": "翼面更宽、容错更高，适合在复杂气流里争取更长的滞空时间。",
+      "baseStats": {
+        "speed": 4,
+        "glide": 8,
+        "stability": 8,
+        "trick": 2,
+        "durability": 5
+      },
+      "slots": ["nose", "wing", "tail", "coating", "weight"],
+      "specialAbility": "平衡滑翔：更容易保持稳定攻角，减少失速风险。",
+      "foldingSteps": [
+        { "stepNumber": 1, "instruction": "横向对折一次，确认中线。", "spriteFrame": "glider_step_1" },
+        { "stepNumber": 2, "instruction": "将前端折成更宽的机鼻。", "spriteFrame": "glider_step_2" },
+        { "stepNumber": 3, "instruction": "对折机身并压出长机翼。", "spriteFrame": "glider_step_3" },
+        { "stepNumber": 4, "instruction": "展开翼尖并抬起尾缘。", "spriteFrame": "glider_step_4" }
+      ],
+      "unlockCondition": "完成一次 500 像素以上的滑翔飞行",
+      "spriteKey": "airplane_classic_glider"
+    },
+    {
+      "id": "butterfly_wing",
+      "name": "蝴蝶翼",
+      "nameEn": "Butterfly Wing",
+      "type": "trick",
+      "description": "轻巧灵活的机体善于做出夸张姿态，适合追求花式操控的飞手。",
+      "baseStats": {
+        "speed": 4,
+        "glide": 5,
+        "stability": 3,
+        "trick": 9,
+        "durability": 4
+      },
+      "slots": ["nose", "wing", "tail", "weight"],
+      "specialAbility": "轻翼翻转：快速调整机头时更容易完成特技动作。",
+      "foldingSteps": [
+        { "stepNumber": 1, "instruction": "沿对角线折出菱形基础。", "spriteFrame": "butterfly_step_1" },
+        { "stepNumber": 2, "instruction": "收紧机身并形成小巧翼根。", "spriteFrame": "butterfly_step_2" },
+        { "stepNumber": 3, "instruction": "向外翻开宽弧形机翼。", "spriteFrame": "butterfly_step_3" },
+        { "stepNumber": 4, "instruction": "抬起尾翼，完成姿态微调。", "spriteFrame": "butterfly_step_4" }
+      ],
+      "unlockCondition": "完成 3 次连续俯仰控制",
+      "spriteKey": "airplane_butterfly_wing"
+    }
+  ]
+}
