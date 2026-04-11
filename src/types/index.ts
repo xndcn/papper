@@ -10,5 +10,6 @@ export interface SceneNavigationButton {
 export interface ResultSceneData {
   readonly distance: number;
   readonly flightTimeMs: number;
+  readonly score: number;
   readonly summary: string;
 }

@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import {
   calculateAngleOfAttackDegrees,
+  calculateAerodynamicForce,
   calculateLaunchVector,
   getAerodynamicCoefficients,
   predictTrajectoryPoints,
+  resolvePitchControlAngularVelocity,
 } from '@/systems/PhysicsSystem';
 
 describe('PhysicsSystem', () => {
@@ -47,5 +49,28 @@ describe('PhysicsSystem', () => {
     expect(points[0].x).toBeGreaterThan(120);
     expect(points[0].y).toBeLessThan(180);
     expect(points[3].x).toBeGreaterThan(points[1].x);
+  });
+
+  it('resolves aerodynamic force into upward lift and opposing drag', () => {
+    const force = calculateAerodynamicForce({
+      airplaneAngleRadians: Math.PI / 18,
+      velocity: { x: 10, y: 0 },
+    });
+
+    expect(force.x).toBeLessThan(0);
+    expect(force.y).toBeLessThan(0);
+    expect(calculateAerodynamicForce({ airplaneAngleRadians: 0, velocity: { x: 0.05, y: 0 } })).toEqual({ x: 0, y: 0 });
+  });
+
+  it('adjusts pitch control angular velocity with clamping', () => {
+    expect(resolvePitchControlAngularVelocity({ currentAngularVelocity: 0.01, direction: 'up' })).toBeLessThan(0.01);
+    expect(resolvePitchControlAngularVelocity({ currentAngularVelocity: -0.01, direction: 'down' })).toBeGreaterThan(-0.01);
+    expect(
+      resolvePitchControlAngularVelocity({
+        currentAngularVelocity: 0.059,
+        direction: 'down',
+        maxAngularVelocity: 0.06,
+      }),
+    ).toBe(0.06);
   });
 });
