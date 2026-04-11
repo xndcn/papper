@@ -20,7 +20,7 @@ import {
 } from '@/systems/BuildSystem';
 import { getAirplanes, getParts, getWeatherPresets } from '@/systems/ContentLoader';
 import { selectWeather } from '@/systems/WeatherSystem';
-import type { Airplane, AirplaneStats, BuildSceneData, Part, PartSlot, SceneNavigationButton } from '@/types';
+import type { Airplane, AirplaneStats, BuildSceneData, Part, PartSlot, SceneNavigationButton, Weather } from '@/types';
 
 const START_RACE_BUTTON: SceneNavigationButton = {
   label: '出战',
@@ -101,7 +101,7 @@ export class BuildScene extends Phaser.Scene {
   private readonly airplanes = getAirplanes();
   private readonly inventory = getParts();
   private selectedAirplaneIndex = 0;
-  private weather = getWeatherPresets()[0];
+  private weather!: Weather;
   private equippedParts: EquippedPartsBySlot = {};
   private airplaneEntries: AirplaneEntry[] = [];
   private slotTexts: Phaser.GameObjects.Text[] = [];
@@ -161,12 +161,21 @@ export class BuildScene extends Phaser.Scene {
       this.scene.start(RETURN_TO_MENU_BUTTON.target);
     });
 
-    this.input.keyboard?.once('keydown-ESC', () => {
+    const handleEscape = () => {
       this.scene.start(RETURN_TO_MENU_BUTTON.target);
-    });
-    this.input.keyboard?.once('keydown-ENTER', () => {
+    };
+    const handleEnter = () => {
       this.launchRace();
-    });
+    };
+
+    this.input.keyboard?.on('keydown-ESC', handleEscape);
+    this.input.keyboard?.on('keydown-ENTER', handleEnter);
+    const cleanupKeyboardListeners = () => {
+      this.input.keyboard?.off('keydown-ESC', handleEscape);
+      this.input.keyboard?.off('keydown-ENTER', handleEnter);
+    };
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, cleanupKeyboardListeners);
+    this.events.once(Phaser.Scenes.Events.DESTROY, cleanupKeyboardListeners);
 
     this.add
       .text(GAME_WIDTH / 2, 262, '点击零件装入对应槽位；点击槽位条目可卸下零件；Enter 出战，Esc 返回', SCENE_HINT_STYLE)
