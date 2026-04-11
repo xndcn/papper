@@ -71,14 +71,23 @@ export class MainMenuScene extends Phaser.Scene {
     previousButton.on('pointerdown', () => this.cycleAirplane(-1));
     nextButton.on('pointerdown', () => this.cycleAirplane(1));
 
-    this.input.keyboard?.on('keydown-LEFT', () => {
+    const handlePrevious = () => {
       this.cycleAirplane(-1);
-    });
-    this.input.keyboard?.on('keydown-RIGHT', () => {
+    };
+    const handleNext = () => {
       this.cycleAirplane(1);
-    });
-    this.input.keyboard?.on('keydown-ENTER', () => {
+    };
+    const handleStart = () => {
       this.scene.start(START_RACE_BUTTON.target, this.createRaceSceneData());
+    };
+
+    this.input.keyboard?.on('keydown-LEFT', handlePrevious);
+    this.input.keyboard?.on('keydown-RIGHT', handleNext);
+    this.input.keyboard?.on('keydown-ENTER', handleStart);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.input.keyboard?.off('keydown-LEFT', handlePrevious);
+      this.input.keyboard?.off('keydown-RIGHT', handleNext);
+      this.input.keyboard?.off('keydown-ENTER', handleStart);
     });
 
     this.add

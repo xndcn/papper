@@ -4,7 +4,7 @@ import { clamp } from '@/utils/math';
 
 type AirplaneStatKey = keyof AirplaneStats;
 
-function sumStatModifier(equippedParts: readonly Part[], statKey: AirplaneStatKey): number {
+function sumStatModifiers(equippedParts: readonly Part[], statKey: AirplaneStatKey): number {
   return equippedParts.reduce((total, part) => total + (part.statModifiers[statKey] ?? 0), 0);
 }
 
@@ -14,10 +14,10 @@ function clampStat(statValue: number): number {
 
 export function calculateFinalStats(baseStats: AirplaneStats, equippedParts: readonly Part[]): AirplaneStats {
   return {
-    speed: clampStat(baseStats.speed + sumStatModifier(equippedParts, 'speed')),
-    glide: clampStat(baseStats.glide + sumStatModifier(equippedParts, 'glide')),
-    stability: clampStat(baseStats.stability + sumStatModifier(equippedParts, 'stability')),
-    trick: clampStat(baseStats.trick + sumStatModifier(equippedParts, 'trick')),
-    durability: clampStat(baseStats.durability + sumStatModifier(equippedParts, 'durability')),
+    speed: clampStat(baseStats.speed + sumStatModifiers(equippedParts, 'speed')),
+    glide: clampStat(baseStats.glide + sumStatModifiers(equippedParts, 'glide')),
+    stability: clampStat(baseStats.stability + sumStatModifiers(equippedParts, 'stability')),
+    trick: clampStat(baseStats.trick + sumStatModifiers(equippedParts, 'trick')),
+    durability: clampStat(baseStats.durability + sumStatModifiers(equippedParts, 'durability')),
   };
 }
