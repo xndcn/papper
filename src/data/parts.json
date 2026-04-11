@@ -1,0 +1,94 @@
+{
+  "parts": [
+    {
+      "id": "iron_nose_clip",
+      "name": "铁质鼻夹",
+      "description": "让机鼻更扎实，提升穿风速度。",
+      "slot": "nose",
+      "rarity": "common",
+      "statModifiers": { "speed": 1, "durability": 1 },
+      "spriteKey": "part_iron_nose_clip"
+    },
+    {
+      "id": "streamlined_nose_cone",
+      "name": "流线鼻锥",
+      "description": "更平滑的前缘造型，兼顾高速与稳定。",
+      "slot": "nose",
+      "rarity": "rare",
+      "statModifiers": { "speed": 2, "stability": 1 },
+      "spriteKey": "part_streamlined_nose_cone"
+    },
+    {
+      "id": "glide_wing_tabs",
+      "name": "滑翔翼片",
+      "description": "增加有效翼面，显著改善滑翔表现。",
+      "slot": "wing",
+      "rarity": "common",
+      "statModifiers": { "glide": 2 },
+      "spriteKey": "part_glide_wing_tabs"
+    },
+    {
+      "id": "butterfly_wing_fins",
+      "name": "蝶翼边鳍",
+      "description": "让机翼更灵活，适合花式飞行。",
+      "slot": "wing",
+      "rarity": "rare",
+      "statModifiers": { "trick": 2, "glide": 1 },
+      "spriteKey": "part_butterfly_wing_fins"
+    },
+    {
+      "id": "paper_tail_fin",
+      "name": "纸质尾鳍",
+      "description": "基础尾翼补强，提升姿态恢复能力。",
+      "slot": "tail",
+      "rarity": "common",
+      "statModifiers": { "stability": 1, "durability": 1 },
+      "spriteKey": "part_paper_tail_fin"
+    },
+    {
+      "id": "stabilizer_tail_strip",
+      "name": "平衡尾条",
+      "description": "帮助飞机更平顺地维持航向。",
+      "slot": "tail",
+      "rarity": "rare",
+      "statModifiers": { "stability": 2 },
+      "spriteKey": "part_stabilizer_tail_strip"
+    },
+    {
+      "id": "wax_coating",
+      "name": "蜡质涂层",
+      "description": "减小表面阻力，让滑行更丝滑。",
+      "slot": "coating",
+      "rarity": "common",
+      "statModifiers": { "glide": 1, "speed": 1 },
+      "spriteKey": "part_wax_coating"
+    },
+    {
+      "id": "speed_varnish",
+      "name": "竞速清漆",
+      "description": "轻量化涂层，专为冲刺设计。",
+      "slot": "coating",
+      "rarity": "rare",
+      "statModifiers": { "speed": 2 },
+      "spriteKey": "part_speed_varnish"
+    },
+    {
+      "id": "clay_weight",
+      "name": "黏土配重",
+      "description": "增加前压，让飞行轨迹更扎实。",
+      "slot": "weight",
+      "rarity": "common",
+      "statModifiers": { "stability": 1, "durability": 1 },
+      "spriteKey": "part_clay_weight"
+    },
+    {
+      "id": "balance_beads",
+      "name": "平衡珠",
+      "description": "精确的重心微调，兼顾控制与特技表现。",
+      "slot": "weight",
+      "rarity": "rare",
+      "statModifiers": { "stability": 1, "trick": 2 },
+      "spriteKey": "part_balance_beads"
+    }
+  ]
+}

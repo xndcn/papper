@@ -8,6 +8,11 @@
 - 将 Phase 1 MVP 路线图从 9 个概要条目细化为 7 个 Step（共 40+ 子任务），每个 Step 包含具体的模块/文件、验证标准和测试要求，便于 Agent 逐步执行
 
 ### 新增
+- Phase 1 Step 1 数据模型与内容数据：
+  - 扩展 `src/types/index.ts`，新增飞机、零件、天气与对手相关的 MVP 类型定义
+  - 新增 `src/data/airplanes.json`、`src/data/parts.json`、`src/data/weather-presets.json`、`src/data/opponents.json`
+  - 新增 `src/systems/ContentLoader.ts`，提供 JSON 数据加载、运行时 schema 校验、缓存与类型安全查询接口
+  - 新增 `src/systems/ContentLoader.test.ts`，覆盖内置内容加载、缓存行为与 schema 校验
 - GitHub Actions CI / CD 工作流：对 push / pull_request 执行 `pnpm lint`、`pnpm test`、`pnpm test:coverage`、`pnpm build`，并在 `main` 分支自动构建发布 GitHub Pages
 - 项目文档体系：README.md、CLAUDE.md、技术选型、游戏设计、系统架构、美术设计文档
 - 开发路线图 (ROADMAP.md)

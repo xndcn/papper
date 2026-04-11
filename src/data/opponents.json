@@ -1,0 +1,22 @@
+{
+  "opponents": [
+    {
+      "id": "rookie_lin",
+      "name": "小林",
+      "title": "冲刺新人",
+      "personality": "aggressive",
+      "airplaneId": "classic_dart",
+      "partIds": ["iron_nose_clip", "speed_varnish"],
+      "dialogues": {
+        "greeting": "来比谁先冲到终点吧！我的飞镖今天状态超好！",
+        "onWin": "哈哈，看吧，速度就是最强答案！",
+        "onLose": "哎呀，这次被你抢先了，下局我会更用力！",
+        "taunt": "别眨眼，我一出手就只剩尾流了！",
+        "respect": "你控制机头的时机真准，我得回去再练练。"
+      },
+      "difficulty": 2,
+      "spriteKey": "opponent_rookie_lin",
+      "backstory": "总在操场角落练习弹弓发射的小林，把每一次比赛都当成百米冲刺。"
+    }
+  ]
+}

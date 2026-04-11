@@ -47,18 +47,18 @@
 > 将 MVP 核心飞行体验拆解为 7 个 Step，逐步引入数据驱动、飞机差异化、天气影响、
 > 构建策略和 AI 对战，最终形成可玩的单场比赛闭环。
 
-- [ ] **Step 1: 数据模型与内容数据**
-  - [ ] 扩展 `src/types/index.ts`：新增 MVP 所需类型定义（参照 architecture.md §4 数据模型）
+- [x] **Step 1: 数据模型与内容数据**
+  - [x] 扩展 `src/types/index.ts`：新增 MVP 所需类型定义（参照 architecture.md §4 数据模型）
     - 飞机相关：AirplaneStats、AirplaneType、Airplane、PartSlot、Rarity、Part
     - 天气相关：WeatherCondition、Weather、WeatherEffects
     - 对手相关：Opponent、OpponentPersonality、OpponentDialogues
-  - [ ] 创建 `src/data/airplanes.json`：3 种基础机型数据（经典飞镖 speed / 经典滑翔机 stability / 蝴蝶翼 trick），含五维属性、可用槽位、解锁条件、描述文本
-  - [ ] 创建 `src/data/parts.json`：10 个基础零件数据（覆盖 nose/wing/tail/coating/weight 五种槽位，含 common 和 rare 稀有度），含属性修正值和描述
-  - [ ] 创建 `src/data/weather-presets.json`：3 种基础天气预设（calm / tailwind / headwind），含风向向量、风力强度和属性修正效果
-  - [ ] 创建 `src/data/opponents.json`：1 个基础 AI 对手数据（菜鸟级，aggressive 性格），含飞机配置、零件列表和对话文本
-  - [ ] 创建 `src/systems/ContentLoader.ts`：JSON 数据加载与缓存模块，提供 getAirplanes / getParts / getWeatherPresets / getOpponents 等类型安全的查询接口
-  - [ ] 单元测试：ContentLoader 查询接口 + 数据 schema 校验（确保 JSON 与 TypeScript 类型一致）
-  - [ ] 验证：`pnpm test:coverage` 通过，`pnpm lint` 通过，所有数据正确加载
+  - [x] 创建 `src/data/airplanes.json`：3 种基础机型数据（经典飞镖 speed / 经典滑翔机 stability / 蝴蝶翼 trick），含五维属性、可用槽位、解锁条件、描述文本
+  - [x] 创建 `src/data/parts.json`：10 个基础零件数据（覆盖 nose/wing/tail/coating/weight 五种槽位，含 common 和 rare 稀有度），含属性修正值和描述
+  - [x] 创建 `src/data/weather-presets.json`：3 种基础天气预设（calm / tailwind / headwind），含风向向量、风力强度和属性修正效果
+  - [x] 创建 `src/data/opponents.json`：1 个基础 AI 对手数据（菜鸟级，aggressive 性格），含飞机配置、零件列表和对话文本
+  - [x] 创建 `src/systems/ContentLoader.ts`：JSON 数据加载与缓存模块，提供 getAirplanes / getParts / getWeatherPresets / getOpponents 等类型安全的查询接口
+  - [x] 单元测试：ContentLoader 查询接口 + 数据 schema 校验（确保 JSON 与 TypeScript 类型一致）
+  - [x] 验证：`pnpm test:coverage` 通过，`pnpm lint` 通过，所有数据正确加载
 
 - [ ] **Step 2: 飞机属性驱动物理系统**
   - [ ] 扩展 `src/systems/PhysicsSystem.ts`：新增 AirplaneStats → 物理参数的映射函数族（所有函数参数范围 1-10，返回 number）
