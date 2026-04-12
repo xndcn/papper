@@ -55,6 +55,19 @@ function formatRewardLabel(reward: Reward): string {
     : String(reward.value);
 }
 
+function formatRewardTypeLabel(reward: Reward): string {
+  switch (reward.type) {
+    case 'skill':
+      return '技能';
+    case 'part':
+      return '零件';
+    case 'coins':
+      return '金币';
+    case 'airplane_unlock':
+      return '解锁';
+  }
+}
+
 function getResultHintText(data: ResultSceneData): string {
   if (data.nextTournamentRun) {
     return data.nextTournamentRun.status === 'in_progress'
@@ -185,7 +198,7 @@ export class ResultScene extends Phaser.Scene {
               .text(
                 GAME_CENTER_X - 152 + index * 152,
                 GAME_CENTER_Y + 114,
-                `${reward.type === 'skill' ? '技能' : reward.type === 'part' ? '零件' : '金币'}\n${formatRewardLabel(reward)}`,
+                `${formatRewardTypeLabel(reward)}\n${formatRewardLabel(reward)}`,
                 REWARD_BUTTON_STYLE,
               )
               .setOrigin(0.5)

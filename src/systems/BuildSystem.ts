@@ -1,5 +1,5 @@
 import { calculateFinalStats } from '@/systems/AirplaneStatsSystem';
-import { calculateBuffedStats } from '@/systems/SkillSystem';
+import { calculateBuffedStats, createSkillBuff } from '@/systems/SkillSystem';
 import type { Airplane, AirplaneStats, Part, PartSlot, Skill } from '@/types';
 
 export type EquippedPartsBySlot = Readonly<Partial<Record<PartSlot, Part>>>;
@@ -101,18 +101,7 @@ export function calculateBuildPreviewWithSkills(
   const basePreview = calculateBuildPreview(airplane, equippedParts);
   const passiveBuffs = passiveSkills
     .filter((skill) => skill.type === 'passive')
-    .map((skill) => ({
-      id: `${skill.id}_preview`,
-      name: skill.name,
-      description: skill.description,
-      duration: skill.effect.duration ?? 0,
-      rarity: skill.rarity,
-      stackable: false,
-      iconKey: skill.iconKey,
-      statModifiers: typeof skill.effect.value === 'object' && !Array.isArray(skill.effect.value) ? skill.effect.value : {},
-      specialEffect: skill.effect.specialId,
-      sourceSkillId: skill.id,
-    }));
+    .map((skill) => createSkillBuff(skill, 0));
 
   return calculateBuffedStats(basePreview, passiveBuffs);
 }

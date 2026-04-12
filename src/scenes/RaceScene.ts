@@ -98,6 +98,8 @@ const SPEED_GAUGE_WIDTH = 96;
 const SPEED_GAUGE_HEIGHT = 8;
 const SPEED_GAUGE_MAX_SPEED = 320;
 const SPEED_GAUGE_REDRAW_THRESHOLD = 1;
+const MIN_STALL_SPEED = 24;
+const MIN_STALL_VERTICAL_VELOCITY = 1.5;
 const FLIGHT_BOUNDS = {
   minX: 0,
   maxX: RACE_WORLD_WIDTH - 28,
@@ -775,7 +777,7 @@ export class RaceScene extends Phaser.Scene {
     const triggerType =
       this.weather.condition === 'headwind'
         ? 'on_headwind'
-        : speed < 24 && verticalVelocity > 1.5
+        : speed < MIN_STALL_SPEED && verticalVelocity > MIN_STALL_VERTICAL_VELOCITY
           ? 'on_stall'
           : undefined;
 
