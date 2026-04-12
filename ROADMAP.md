@@ -206,21 +206,21 @@
   - [x] 单元测试：经验-等级映射、升级边界、解锁条件判定、Run 奖励经验计算
   - [x] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过
 
-- [ ] **Step 6: 锦标赛地图场景与馆主对手**
-  - [ ] 创建 `src/scenes/TournamentMapScene.ts`：锦标赛分支路径地图界面
-    - [ ] 节点地图渲染：纵向排列，每层 2-3 个节点，用不同图标/颜色区分节点类型（普通比赛/精英/商店/事件/Boss）
-    - [ ] 路径连线绘制：相邻层之间的连线，已访问路径标灰
-    - [ ] 当前位置标记：高亮当前可选节点
-    - [ ] 节点点击交互：点击可选节点 → 显示节点信息（对手/商店/事件描述）→ 确认选择
-    - [ ] 锦标赛进度显示：当前层/总层数、已获金币、已收集零件数
-    - [ ] "放弃 Run"按钮：确认后结算当前进度并返回主菜单
-  - [ ] 新增 1 位馆主级对手到 `src/data/opponents.json`：林小冲（班级赛馆主，aggressive 性格，difficulty 6-7，速度型飞机，完整对话集含胜/败/嘲讽/尊重）
-  - [ ] 扩展 `src/systems/OpponentAI.ts`：馆主级 AI 行为增强
-    - [ ] 馆主发射参数更优化（更贴近最优角度，力度波动更小）
-    - [ ] 馆主飞行模拟中应用其装备的零件和技能加成
-  - [ ] 更新场景流转：MainMenuScene → TournamentMapScene → BuildScene → RaceScene → ResultScene → TournamentMapScene（循环直到 Run 结束）→ MainMenuScene
-  - [ ] 更新 `src/config/constants.ts`：新增 TOURNAMENT_MAP 场景 key 和流转关系
-  - [ ] 验证：可在锦标赛地图中选择节点、查看节点信息、进入比赛、比赛后返回地图继续选择
+- [x] **Step 6: 锦标赛地图场景与馆主对手**
+  - [x] 创建 `src/scenes/TournamentMapScene.ts`：锦标赛分支路径地图界面
+    - [x] 节点地图渲染：纵向排列，每层 2-3 个节点，用不同图标/颜色区分节点类型（普通比赛/精英/商店/事件/Boss）
+    - [x] 路径连线绘制：相邻层之间的连线，已访问路径标灰
+    - [x] 当前位置标记：高亮当前可选节点
+    - [x] 节点点击交互：点击可选节点 → 显示节点信息（对手/商店/事件描述）→ 确认选择
+    - [x] 锦标赛进度显示：当前层/总层数、已获金币、已收集零件数
+    - [x] "放弃 Run"按钮：确认后结算当前进度并返回主菜单
+  - [x] 新增 1 位馆主级对手到 `src/data/opponents.json`：林小冲（班级赛馆主，aggressive 性格，difficulty 6-7，速度型飞机，完整对话集含胜/败/嘲讽/尊重）
+  - [x] 扩展 `src/systems/OpponentAI.ts`：馆主级 AI 行为增强
+    - [x] 馆主发射参数更优化（更贴近最优角度，力度波动更小）
+    - [x] 馆主飞行模拟中应用其装备的零件和技能加成
+  - [x] 更新场景流转：MainMenuScene → TournamentMapScene → BuildScene → RaceScene → ResultScene → TournamentMapScene（循环直到 Run 结束）→ MainMenuScene
+  - [x] 更新 `src/config/constants.ts`：新增 TOURNAMENT_MAP 场景 key 和流转关系
+  - [x] 验证：可在锦标赛地图中选择节点、查看节点信息、进入比赛、比赛后返回地图继续选择
 
 - [ ] **Step 7: 技能场景集成与赛间奖励**
   - [ ] 更新 `src/scenes/BuildScene.ts`：新增技能装备功能
