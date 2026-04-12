@@ -304,23 +304,27 @@ function selectOpponent(
     throw new Error('at least one opponent is required to generate tournament nodes');
   }
 
-  const sortedCandidates = [...opponents].sort((left, right) => {
-    const leftScore = scoreOpponent(left, difficulty, type);
-    const rightScore = scoreOpponent(right, difficulty, type);
-
-    if (leftScore !== rightScore) {
-      return leftScore - rightScore;
+  const scoredCandidates = opponents.map((opponent) => ({
+    opponent,
+    score: scoreOpponent(opponent, difficulty, type),
+  }));
+  const sortedCandidates = scoredCandidates.sort((left, right) => {
+    if (left.score !== right.score) {
+      return left.score - right.score;
     }
 
-    return left.id.localeCompare(right.id);
+    return left.opponent.id.localeCompare(right.opponent.id);
   });
-  const candidateCount = Math.min(3, sortedCandidates.length);
-  const candidates = sortedCandidates.slice(0, candidateCount);
-  const weights = candidates.map((opponent, index) =>
-    Math.max(1, BASE_OPPONENT_WEIGHT - scoreOpponent(opponent, difficulty, type) - index),
+  const candidates = sortedCandidates.slice(0, Math.min(3, sortedCandidates.length));
+  const weights = candidates.map(({ score }, index) =>
+    Math.max(1, BASE_OPPONENT_WEIGHT - score - index),
   );
 
-  return weightedChoice(rng, candidates, weights);
+  return weightedChoice(
+    rng,
+    candidates.map(({ opponent }) => opponent),
+    weights,
+  );
 }
 
 function scoreOpponent(
@@ -439,6 +443,11 @@ function findNodeLayerIndex(map: TournamentMap, nodeId: string): number {
   return map.layers.findIndex((layer) => layer.some((node) => node.id === nodeId));
 }
 
+/**
+ * Uses a small 32-bit FNV-1a style hash to deterministically derive per-node seeds
+ * from the run seed and node id, so repeated visits to the same node configuration
+ * always resolve the same weather and other seeded race details.
+ */
 function deriveNodeSeed(seed: number, nodeId: string): number {
   let hash = seed >>> 0;
 
