@@ -19,6 +19,15 @@ import {
   type AILaunchParams,
 } from '@/systems/OpponentAI';
 import {
+  activateSkill,
+  calculateBuffedStats,
+  checkPassiveTrigger,
+  createSkillBuff,
+  removeExpiredBuffs,
+  updateCooldowns,
+  type SkillState,
+} from '@/systems/SkillSystem';
+import {
   calculateAerodynamicForce,
   calculateAngleOfAttackDegrees,
   calculateAngularDamping,
@@ -37,6 +46,7 @@ import { completeRace } from '@/systems/TournamentSystem';
 import { calculateWindEffect, selectWeather } from '@/systems/WeatherSystem';
 import type {
   AirplaneStats,
+  Buff,
   Opponent,
   OpponentRaceResult,
   Part,
@@ -44,6 +54,7 @@ import type {
   RaceSceneData,
   ResultSceneData,
   SceneNavigationButton,
+  Skill,
   Weather,
 } from '@/types';
 import { formatRelativeRacePosition, getWindDirectionArrow } from '@/utils/scenePresentation';
@@ -132,6 +143,7 @@ function resolveRaceSceneData(data: RaceSceneData | undefined): Required<RaceSce
     airplaneName: data?.airplaneName ?? resolvedAirplane.name,
     airplaneStats: data?.airplaneStats ?? calculateFinalStats(resolvedAirplane.baseStats, equippedParts),
     equippedParts,
+    equippedSkills: data?.equippedSkills ?? [],
     weather: data?.weather ?? selectWeather(getWeatherPresets(), Date.now()),
     opponentId: data?.opponentId ?? DEFAULT_OPPONENT.id,
     tournamentRun: data?.tournamentRun,
@@ -260,6 +272,17 @@ function createTournamentRaceResult({
   } as const;
 }
 
+function formatBuffSummary(buff: Buff, currentTime: number): string {
+  const remainingMs =
+    buff.startTime === undefined || buff.duration <= 0 ? 0 : Math.max(0, buff.startTime + buff.duration - currentTime);
+  return `${buff.name}${remainingMs > 0 ? ` ${Math.ceil(remainingMs / 100) / 10}s` : ''}`;
+}
+
+function formatSkillButtonLabel(skillState: SkillState, currentTime: number): string {
+  const remainingMs = Math.max(0, skillState.cooldownEnd - currentTime);
+  return skillState.isReady ? skillState.skill.name : `${skillState.skill.name} ${Math.ceil(remainingMs / 100) / 10}s`;
+}
+
 export class RaceScene extends Phaser.Scene {
   private airplane?: Phaser.Physics.Matter.Image;
   private guideGraphics?: Phaser.GameObjects.Graphics;
@@ -275,6 +298,9 @@ export class RaceScene extends Phaser.Scene {
   private speedGaugeGraphics?: Phaser.GameObjects.Graphics;
   private playerProgressMarker?: Phaser.GameObjects.Arc;
   private opponentProgressMarker?: Phaser.GameObjects.Arc;
+  private skillStatusText?: Phaser.GameObjects.Text;
+  private buffStatusText?: Phaser.GameObjects.Text;
+  private skillButtons: Phaser.GameObjects.Text[] = [];
   private airplaneName = DEFAULT_AIRPLANE.name;
   private airplaneStats = DEFAULT_AIRPLANE.baseStats;
   private weather = DEFAULT_WEATHER;
@@ -282,6 +308,10 @@ export class RaceScene extends Phaser.Scene {
   private opponentStats = DEFAULT_AIRPLANE.baseStats;
   private currentRaceSceneData: Required<RaceSceneData> = resolveRaceSceneData(undefined);
   private airplanePhysicsProfile = createAirplanePhysicsProfile(DEFAULT_AIRPLANE.baseStats);
+  private activeBuffs: Buff[] = [];
+  private skillStates: SkillState[] = [];
+  private passiveSkills: Skill[] = [];
+  private readonly triggeredPassiveSkillIds = new Set<string>();
   private opponentLaunchParams?: AILaunchParams;
   private opponentResult?: OpponentRaceResult;
   private isDragging = false;
@@ -315,6 +345,15 @@ export class RaceScene extends Phaser.Scene {
     this.opponentStats = opponentSetup.stats;
     this.currentRaceSceneData = raceSceneData;
     this.airplanePhysicsProfile = createAirplanePhysicsProfile(raceSceneData.airplaneStats);
+    this.activeBuffs = [];
+    this.skillStates = raceSceneData.equippedSkills.map((skill) => ({
+      skill,
+      cooldownEnd: 0,
+      uses: 0,
+      isReady: true,
+    }));
+    this.passiveSkills = (raceSceneData.tournamentRun?.runSkills ?? []).filter((skill) => skill.type === 'passive');
+    this.triggeredPassiveSkillIds.clear();
     this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
     this.cameras.main.setBounds(0, 0, RACE_WORLD_WIDTH, GAME_HEIGHT);
     this.createParallaxBackground();
@@ -340,6 +379,10 @@ export class RaceScene extends Phaser.Scene {
       return;
     }
 
+    this.activeBuffs = removeExpiredBuffs(this.activeBuffs, this.time.now);
+    this.skillStates = updateCooldowns(this.skillStates, this.time.now);
+    const runtimeStats = calculateBuffedStats(this.airplaneStats, this.activeBuffs);
+    this.airplanePhysicsProfile = createAirplanePhysicsProfile(runtimeStats);
     const velocity = this.airplane.body?.velocity ?? { x: 0, y: 0 };
     const currentAngularVelocity = this.airplane.body?.angularVelocity ?? 0;
     // First apply stability damping, then layer either auto-glide alignment or active pitch input on top.
@@ -350,7 +393,7 @@ export class RaceScene extends Phaser.Scene {
       airplaneAngleRadians = resolveGlideAlignmentRotation({
         currentRotationRadians: airplaneAngleRadians,
         velocity,
-        stabilityStat: this.airplaneStats.stability,
+        stabilityStat: runtimeStats.stability,
         deltaMs: delta,
       });
       this.airplane.setRotation(airplaneAngleRadians);
@@ -375,7 +418,11 @@ export class RaceScene extends Phaser.Scene {
     });
 
     this.airplane.applyForce(toPhaserVector(aerodynamicForce));
-    this.airplane.applyForce(toPhaserVector(scaleVector(calculateWindEffect(this.weather, this.airplaneStats), delta / 1000)));
+    const windEffect =
+      this.hasActiveSpecialEffect('block_collision_and_headwind_once') && this.weather.condition === 'headwind'
+        ? { x: 0, y: 0 }
+        : calculateWindEffect(this.weather, runtimeStats);
+    this.airplane.applyForce(toPhaserVector(scaleVector(windEffect, delta / 1000)));
 
     if (isFlightOutOfBounds({ x: this.airplane.x, y: this.airplane.y }, FLIGHT_BOUNDS)) {
       this.handleLanding('out_of_bounds');
@@ -389,9 +436,16 @@ export class RaceScene extends Phaser.Scene {
     const playerDistancePx = Math.max(0, this.airplane.x - this.launchStartX);
     const opponentProjectedDistance = this.resolveAnimatedOpponentDistance(this.time.now - this.flightStartTime);
     const altitudePx = Math.max(0, Math.round(GROUND_TOP_Y - this.airplane.y));
+    this.checkPassiveSkills(speed, velocity.y);
 
     this.updateProgressMarkers(playerDistancePx, opponentProjectedDistance);
     this.renderTelemetry(speed, altitudePx, Math.round(playerDistancePx), Math.round(opponentProjectedDistance));
+    this.buffStatusText?.setText(
+      this.activeBuffs.length > 0
+        ? `Buff：${this.activeBuffs.map((buff) => formatBuffSummary(buff, this.time.now)).join(' ｜ ')}`
+        : `Buff：${this.passiveSkills.length > 0 ? '等待被动 / 主动技能触发' : '当前无 Buff'}`,
+    );
+    this.refreshSkillButtons();
 
     this.statusText.setText([
       `速度 ${speed.toFixed(2)} px/s · 攻角 ${formatSignedAngle(angleOfAttack)}`,
@@ -442,6 +496,11 @@ export class RaceScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setScrollFactor(0);
     this.speedGaugeGraphics = this.add.graphics().setScrollFactor(0);
+    this.buffStatusText = this.add.text(GAME_WIDTH - 24, 108, 'Buff：当前无 Buff', SCENE_HINT_STYLE).setOrigin(1, 0).setScrollFactor(0);
+    this.skillStatusText = this.add
+      .text(GAME_WIDTH - 24, 122, this.skillStates.length > 0 ? '技能待命：点击下方按钮触发' : '技能待命：当前未装备主动技能', SCENE_HINT_STYLE)
+      .setOrigin(1, 0)
+      .setScrollFactor(0);
     this.add.text(24, PROGRESS_TRACK_Y, '你', SCENE_HINT_STYLE).setOrigin(0, 0.5).setScrollFactor(0);
     this.add.text(132, PROGRESS_TRACK_Y, 'AI', SCENE_HINT_STYLE).setOrigin(0, 0.5).setScrollFactor(0);
     this.add.rectangle(
@@ -459,11 +518,12 @@ export class RaceScene extends Phaser.Scene {
       .text(
         24,
         GAME_HEIGHT - 18,
-        `${formatStatsLabel(this.airplaneStats)}；当前天气：${this.weather.displayName}；可点“重新试飞”重置本次尝试。`,
+        `${formatStatsLabel(this.airplaneStats)}；当前天气：${this.weather.displayName}；下方技能按钮支持点击 / 触屏触发。`,
         SCENE_HINT_STYLE,
       )
       .setOrigin(0, 0.5)
       .setScrollFactor(0);
+    this.createSkillButtons();
     this.renderSpeedGauge(0);
   }
 
@@ -590,6 +650,21 @@ export class RaceScene extends Phaser.Scene {
       });
   }
 
+  private createSkillButtons(): void {
+    this.skillButtons.forEach((button) => button.destroy());
+    this.skillButtons = this.skillStates.map((skillState, index) =>
+      this.add
+        .text(64 + index * 92, GAME_HEIGHT - 50, skillState.skill.name, SCENE_BUTTON_STYLE)
+        .setOrigin(0.5)
+        .setScrollFactor(0)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          this.tryActivateSkill(index);
+        }),
+    );
+    this.refreshSkillButtons();
+  }
+
   private bindPitchControlKey(key: string, direction: PitchControlDirection): void {
     this.input.keyboard?.on(`keydown-${key}`, () => {
       this.pitchDirection = direction;
@@ -649,6 +724,98 @@ export class RaceScene extends Phaser.Scene {
         this.handleLanding();
       }
     });
+  }
+
+  private refreshSkillButtons(): void {
+    this.skillButtons.forEach((button, index) => {
+      const skillState = this.skillStates[index];
+      if (!skillState) {
+        return;
+      }
+
+      button.setText(formatSkillButtonLabel(skillState, this.time.now));
+      button.setAlpha(skillState.isReady && this.hasLaunched && !this.hasLanded ? 1 : 0.5);
+    });
+  }
+
+  private tryActivateSkill(index: number): void {
+    if (!this.hasLaunched || this.hasLanded) {
+      this.skillStatusText?.setText('技能待命：请先完成发射再触发主动技能');
+      return;
+    }
+
+    const skillState = this.skillStates[index];
+    if (!skillState) {
+      return;
+    }
+
+    if (!skillState.isReady) {
+      this.skillStatusText?.setText(`技能冷却中：${skillState.skill.name}`);
+      return;
+    }
+
+    const activation = activateSkill(skillState.skill, this.time.now);
+    this.activeBuffs = [...this.activeBuffs, activation.buff];
+    this.skillStates = this.skillStates.map((currentSkillState, skillIndex) =>
+      skillIndex === index
+        ? {
+            ...currentSkillState,
+            cooldownEnd: activation.cooldownEnd,
+            uses: currentSkillState.uses + 1,
+            isReady: false,
+          }
+        : currentSkillState,
+    );
+    this.applySpecialSkillEffect(activation.buff.specialEffect);
+    this.skillStatusText?.setText(`技能触发：${skillState.skill.name}`);
+    this.refreshSkillButtons();
+  }
+
+  private checkPassiveSkills(speed: number, verticalVelocity: number): void {
+    const triggerType =
+      this.weather.condition === 'headwind'
+        ? 'on_headwind'
+        : speed < 24 && verticalVelocity > 1.5
+          ? 'on_stall'
+          : undefined;
+
+    if (!triggerType) {
+      return;
+    }
+
+    const matchingSkill = this.passiveSkills.find(
+      (skill) => !this.triggeredPassiveSkillIds.has(skill.id) && checkPassiveTrigger(skill, { type: triggerType }),
+    );
+
+    if (!matchingSkill) {
+      return;
+    }
+
+    this.triggeredPassiveSkillIds.add(matchingSkill.id);
+    const buff = createSkillBuff(matchingSkill, this.time.now);
+    this.activeBuffs = [...this.activeBuffs, buff];
+    this.applySpecialSkillEffect(buff.specialEffect);
+    this.skillStatusText?.setText(`被动触发：${matchingSkill.name}`);
+  }
+
+  private applySpecialSkillEffect(specialEffect: string | undefined): void {
+    if (!this.airplane || !specialEffect) {
+      return;
+    }
+
+    if (specialEffect === 'turn_pitch_45_degrees') {
+      this.airplane.setRotation(this.airplane.rotation - Phaser.Math.DegToRad(45));
+      this.airplane.applyForce(new Phaser.Math.Vector2(0.006, -0.008));
+      return;
+    }
+
+    if (specialEffect === 'phoenix_rise_once') {
+      this.airplane.applyForce(new Phaser.Math.Vector2(0, -0.012));
+    }
+  }
+
+  private hasActiveSpecialEffect(specialEffect: string): boolean {
+    return this.activeBuffs.some((buff) => buff.specialEffect === specialEffect);
   }
 
   private beginDrag(pointer: Phaser.Input.Pointer): void {
@@ -866,21 +1033,24 @@ export class RaceScene extends Phaser.Scene {
     };
 
     if (this.currentRaceSceneData.tournamentRun && this.currentRaceSceneData.tournamentNodeId) {
+      const completion = completeRace(
+        this.currentRaceSceneData.tournamentRun,
+        createTournamentRaceResult({
+          nodeId: this.currentRaceSceneData.tournamentNodeId,
+          playerRank,
+          rankings,
+          distance,
+          flightTimeMs,
+          weather: this.weather,
+          opponent: this.opponent,
+          opponentResult: this.opponentResult,
+        }),
+      );
       this.resultData = {
         ...this.resultData,
-        nextTournamentRun: completeRace(
-          this.currentRaceSceneData.tournamentRun,
-          createTournamentRaceResult({
-            nodeId: this.currentRaceSceneData.tournamentNodeId,
-            playerRank,
-            rankings,
-            distance,
-            flightTimeMs,
-            weather: this.weather,
-            opponent: this.opponent,
-            opponentResult: this.opponentResult,
-          }),
-        ),
+        nextTournamentRun: completion.nextRun,
+        rewardOptions: completion.rewardOptions,
+        specialRewards: completion.specialRewards,
       };
     }
 
@@ -922,6 +1092,14 @@ export class RaceScene extends Phaser.Scene {
     this.hasLanded = false;
     this.opponentLaunchParams = undefined;
     this.opponentResult = undefined;
+    this.activeBuffs = [];
+    this.skillStates = this.skillStates.map((skillState) => ({
+      ...skillState,
+      cooldownEnd: 0,
+      isReady: true,
+      uses: 0,
+    }));
+    this.triggeredPassiveSkillIds.clear();
     this.launchStartX = LAUNCH_ANCHOR.x;
     this.maxFlightX = LAUNCH_ANCHOR.x;
     this.pitchDirection = 'neutral';
@@ -943,13 +1121,16 @@ export class RaceScene extends Phaser.Scene {
       `对手 ${this.opponent.name}（${formatOpponentPersonality(this.opponent.personality)}）会同步起飞并给出预估成绩。`,
       `当前天气：${this.weather.displayName} ${getWindDirectionArrow(this.weather)} · 风力 ${this.weather.windStrength}`,
       '发射后可轻触并按住上/下半屏微调机头，松开后会自动顺着速度方向滑翔。',
-      '目标：观察飞机着陆或越界后进入带排名的计分结算。',
+      '目标：观察飞机着陆或越界后进入带排名、奖励与技能反馈的计分结算。',
     ]);
     this.relativePositionText?.setText('相对位置：等待发射');
+    this.buffStatusText?.setText('Buff：当前无 Buff');
+    this.skillStatusText?.setText(this.skillStates.length > 0 ? '技能待命：点击下方按钮触发' : '技能待命：当前未装备主动技能');
     this.flightMetricsText?.setText([
       '高度 0px · 距离 0px',
       `风向 ${getWindDirectionArrow(this.weather)} · 风力 ${this.weather.windStrength} · AI 0px`,
     ]);
     this.renderSpeedGauge(0);
+    this.refreshSkillButtons();
   }
 }

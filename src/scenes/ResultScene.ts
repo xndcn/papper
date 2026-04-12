@@ -11,7 +11,8 @@ import {
   SCENE_TITLE_STYLE,
 } from '@/config/constants';
 import { calculateFlightScore } from '@/systems/RaceSystem';
-import type { RaceSceneData, ResultSceneData, SceneNavigationButton } from '@/types';
+import { claimRaceRewards } from '@/systems/TournamentSystem';
+import type { RaceSceneData, ResultSceneData, Reward, SceneNavigationButton } from '@/types';
 
 const REPLAY_BUTTON: SceneNavigationButton = {
   label: '再来一局',
@@ -30,6 +31,29 @@ const DEFAULT_RESULT_DATA: ResultSceneData = {
   score: 0,
   summary: '尚未生成比赛结果。',
 };
+
+const REWARD_BUTTON_STYLE = {
+  ...SCENE_BUTTON_STYLE,
+  fontSize: '10px',
+  padding: {
+    x: 10,
+    y: 6,
+  },
+} as const;
+
+function formatRewardLabel(reward: Reward): string {
+  if (reward.type === 'coins') {
+    return `${typeof reward.value === 'number' ? reward.value : 0} 金币`;
+  }
+
+  if (reward.type === 'airplane_unlock') {
+    return `解锁 ${String(reward.value)}`;
+  }
+
+  return typeof reward.value === 'object' && reward.value !== null && 'name' in reward.value
+    ? String(reward.value.name)
+    : String(reward.value);
+}
 
 function getResultHintText(data: ResultSceneData): string {
   if (data.nextTournamentRun) {
@@ -60,11 +84,20 @@ export class ResultScene extends Phaser.Scene {
   create(data: ResultSceneData = DEFAULT_RESULT_DATA): void {
     this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
     const hasTournamentFollowUp = data.nextTournamentRun !== undefined;
+    const hasRewardOptions = hasTournamentFollowUp && (data.rewardOptions?.length ?? 0) > 0;
     const primaryButtonLabel = hasTournamentFollowUp
-      ? data.nextTournamentRun.status === 'in_progress'
-        ? '返回地图'
-        : '完成 Run'
+      ? hasRewardOptions
+        ? '确认奖励'
+        : data.nextTournamentRun.status === 'in_progress'
+          ? '返回地图'
+          : '完成 Run'
       : REPLAY_BUTTON.label;
+    const primaryButtonY = hasRewardOptions ? GAME_CENTER_Y + 76 : GAME_CENTER_Y + 98;
+    const rankingY = hasRewardOptions ? GAME_CENTER_Y + 48 : GAME_CENTER_Y + 62;
+    const hintY = hasRewardOptions ? GAME_CENTER_Y + 96 : GAME_CENTER_Y + 128;
+    let resolvedTournamentRun = data.nextTournamentRun;
+    let selectedReward: Reward | undefined;
+    let selectedRewardIndex = -1;
     const rankings = data.rankings ?? [
       {
         name: data.playerName ?? '你',
@@ -108,10 +141,10 @@ export class ResultScene extends Phaser.Scene {
       .setOrigin(0.5);
     this.add.text(GAME_CENTER_X, GAME_CENTER_Y + 20, data.summary, SCENE_SUBTITLE_STYLE).setOrigin(0.5);
     this.add
-      .text(GAME_CENTER_X, GAME_CENTER_Y + 62, rankingLines.join('\n'), SCENE_SUBTITLE_STYLE)
+      .text(GAME_CENTER_X, rankingY, rankingLines.join('\n'), SCENE_SUBTITLE_STYLE)
       .setOrigin(0.5)
-      .setLineSpacing(8);
-    if (data.opponentResult) {
+      .setLineSpacing(hasRewardOptions ? 6 : 8);
+    if (data.opponentResult && !hasRewardOptions) {
       this.add
         .text(
           GAME_CENTER_X,
@@ -123,11 +156,11 @@ export class ResultScene extends Phaser.Scene {
     }
 
     const replayButton = this.add
-      .text(GAME_CENTER_X - 72, GAME_CENTER_Y + 98, primaryButtonLabel, SCENE_BUTTON_STYLE)
+      .text(GAME_CENTER_X - 72, primaryButtonY, primaryButtonLabel, SCENE_BUTTON_STYLE)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     const returnButton = this.add
-      .text(GAME_CENTER_X + 72, GAME_CENTER_Y + 98, RETURN_TO_MENU_BUTTON.label, SCENE_BUTTON_STYLE)
+      .text(GAME_CENTER_X + 72, primaryButtonY, RETURN_TO_MENU_BUTTON.label, SCENE_BUTTON_STYLE)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
@@ -139,17 +172,69 @@ export class ResultScene extends Phaser.Scene {
     const hintText = this.add
       .text(
         GAME_CENTER_X,
-        GAME_CENTER_Y + 128,
+        hintY,
         getResultHintText(data),
         SCENE_HINT_STYLE,
       )
       .setOrigin(0.5);
 
+    const rewardButtons =
+      hasRewardOptions && data.rewardOptions
+        ? data.rewardOptions.map((reward, index) =>
+            this.add
+              .text(
+                GAME_CENTER_X - 152 + index * 152,
+                GAME_CENTER_Y + 114,
+                `${reward.type === 'skill' ? '技能' : reward.type === 'part' ? '零件' : '金币'}\n${formatRewardLabel(reward)}`,
+                REWARD_BUTTON_STYLE,
+              )
+              .setOrigin(0.5)
+              .setAlign('center')
+              .setInteractive({ useHandCursor: true })
+              .on('pointerdown', () => {
+                selectedReward = reward;
+                selectedRewardIndex = index;
+                resolvedTournamentRun = data.nextTournamentRun
+                  ? claimRaceRewards(data.nextTournamentRun, reward, data.specialRewards)
+                  : data.nextTournamentRun;
+                hintText.setText(
+                  `已选择奖励：${formatRewardLabel(reward)}${
+                    data.specialRewards && data.specialRewards.length > 0
+                      ? `；额外获得 ${data.specialRewards.map((item) => formatRewardLabel(item)).join('、')}`
+                      : ''
+                  }`,
+                );
+                rewardButtons.forEach((button, buttonIndex) => {
+                  button.setAlpha(buttonIndex === selectedRewardIndex ? 1 : 0.55);
+                });
+              }),
+          )
+        : [];
+
+    if (hasRewardOptions) {
+      this.add.text(GAME_CENTER_X, GAME_CENTER_Y + 92, '胜利奖励三选一', SCENE_SUBTITLE_STYLE).setOrigin(0.5);
+      if (data.specialRewards && data.specialRewards.length > 0) {
+        this.add
+          .text(
+            GAME_CENTER_X,
+            GAME_CENTER_Y + 16,
+            `特殊奖励：${data.specialRewards.map((reward) => formatRewardLabel(reward)).join('、')}`,
+            SCENE_HINT_STYLE,
+          )
+          .setOrigin(0.5);
+      }
+    }
+
     replayButton.on('pointerdown', () => {
       if (hasTournamentFollowUp) {
-        if (data.nextTournamentRun.status === 'in_progress') {
+        if (hasRewardOptions && !selectedReward) {
+          hintText.setText('请先在下方奖励面板中选择一项奖励。');
+          return;
+        }
+
+        if (resolvedTournamentRun?.status === 'in_progress') {
           this.scene.start(SCENE_KEYS.TOURNAMENT_MAP, {
-            run: data.nextTournamentRun,
+            run: resolvedTournamentRun,
             airplaneId: data.airplaneId,
           });
           return;
@@ -169,9 +254,14 @@ export class ResultScene extends Phaser.Scene {
 
     this.input.keyboard?.once('keydown-ENTER', () => {
       if (hasTournamentFollowUp) {
-        if (data.nextTournamentRun.status === 'in_progress') {
+        if (hasRewardOptions && !selectedReward) {
+          hintText.setText('请先在下方奖励面板中选择一项奖励。');
+          return;
+        }
+
+        if (resolvedTournamentRun?.status === 'in_progress') {
           this.scene.start(SCENE_KEYS.TOURNAMENT_MAP, {
-            run: data.nextTournamentRun,
+            run: resolvedTournamentRun,
             airplaneId: data.airplaneId,
           });
           return;

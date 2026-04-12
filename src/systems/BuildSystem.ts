@@ -1,7 +1,9 @@
 import { calculateFinalStats } from '@/systems/AirplaneStatsSystem';
-import type { Airplane, AirplaneStats, Part, PartSlot } from '@/types';
+import { calculateBuffedStats } from '@/systems/SkillSystem';
+import type { Airplane, AirplaneStats, Part, PartSlot, Skill } from '@/types';
 
 export type EquippedPartsBySlot = Readonly<Partial<Record<PartSlot, Part>>>;
+export type EquippedSkills = readonly Skill[];
 
 export function getCompatibleParts(airplane: Airplane, inventory: readonly Part[]): readonly Part[] {
   return inventory.filter((part) => airplane.slots.includes(part.slot));
@@ -61,4 +63,56 @@ export function getEquippedPartsList(
 
 export function calculateBuildPreview(airplane: Airplane, equippedParts: EquippedPartsBySlot): AirplaneStats {
   return calculateFinalStats(airplane.baseStats, getEquippedPartsList(equippedParts, airplane.slots));
+}
+
+export function getSkillSlotCount(airplane: Airplane): number {
+  return airplane.type === 'stability' ? 3 : 2;
+}
+
+export function equipSkill(equippedSkills: EquippedSkills, skill: Skill, slotCount: number): EquippedSkills {
+  if (skill.type !== 'active' || slotCount < 1) {
+    return equippedSkills;
+  }
+
+  if (equippedSkills.some((equippedSkill) => equippedSkill.id === skill.id)) {
+    return equippedSkills;
+  }
+
+  if (equippedSkills.length < slotCount) {
+    return [...equippedSkills, skill];
+  }
+
+  return [...equippedSkills.slice(0, Math.max(0, slotCount - 1)), skill];
+}
+
+export function unequipSkill(equippedSkills: EquippedSkills, slotIndex: number): EquippedSkills {
+  if (slotIndex < 0 || slotIndex >= equippedSkills.length) {
+    return equippedSkills;
+  }
+
+  return equippedSkills.filter((_, index) => index !== slotIndex);
+}
+
+export function calculateBuildPreviewWithSkills(
+  airplane: Airplane,
+  equippedParts: EquippedPartsBySlot,
+  passiveSkills: readonly Skill[],
+): AirplaneStats {
+  const basePreview = calculateBuildPreview(airplane, equippedParts);
+  const passiveBuffs = passiveSkills
+    .filter((skill) => skill.type === 'passive')
+    .map((skill) => ({
+      id: `${skill.id}_preview`,
+      name: skill.name,
+      description: skill.description,
+      duration: skill.effect.duration ?? 0,
+      rarity: skill.rarity,
+      stackable: false,
+      iconKey: skill.iconKey,
+      statModifiers: typeof skill.effect.value === 'object' && !Array.isArray(skill.effect.value) ? skill.effect.value : {},
+      specialEffect: skill.effect.specialId,
+      sourceSkillId: skill.id,
+    }));
+
+  return calculateBuffedStats(basePreview, passiveBuffs);
 }

@@ -2,13 +2,18 @@ import { describe, expect, it } from 'vitest';
 
 import {
   calculateBuildPreview,
+  calculateBuildPreviewWithSkills,
   equipPart,
+  equipSkill,
   getCompatibleParts,
   getEquippedPartsList,
+  getSkillSlotCount,
   sanitizeEquippedParts,
+  unequipSkill,
   unequipPart,
   type EquippedPartsBySlot,
 } from '@/systems/BuildSystem';
+import { getSkillById } from '@/systems/ContentLoader';
 import type { Airplane, Part } from '@/types';
 
 const TEST_AIRPLANE: Airplane = {
@@ -87,5 +92,46 @@ describe('BuildSystem', () => {
       wing: equippedParts.wing,
     });
     expect(unequipPart({}, 'tail')).toEqual({});
+  });
+
+  it('assigns airplane skill slots and applies passive skill modifiers in build preview', () => {
+    const passiveSkill = getSkillById('headwind_rider');
+
+    expect(passiveSkill).toBeDefined();
+    expect(getSkillSlotCount(TEST_AIRPLANE)).toBe(2);
+    expect(
+      getSkillSlotCount({
+        ...TEST_AIRPLANE,
+        type: 'stability',
+      }),
+    ).toBe(3);
+    expect(
+      calculateBuildPreviewWithSkills(TEST_AIRPLANE, {}, passiveSkill ? [passiveSkill] : []),
+    ).toEqual({
+      speed: 5,
+      glide: 5,
+      stability: 5,
+      trick: 2,
+      durability: 6,
+    });
+  });
+
+  it('equips active skills into limited slots and supports removing by slot index', () => {
+    const firstSkill = getSkillById('boost_dash');
+    const secondSkill = getSkillById('sharp_turn');
+    const thirdSkill = getSkillById('paper_shield');
+
+    expect(firstSkill).toBeDefined();
+    expect(secondSkill).toBeDefined();
+    expect(thirdSkill).toBeDefined();
+
+    const equippedFirst = equipSkill([], firstSkill!, 2);
+    const equippedSecond = equipSkill(equippedFirst, secondSkill!, 2);
+    const replacedWhenFull = equipSkill(equippedSecond, thirdSkill!, 2);
+
+    expect(equippedFirst.map((skill) => skill.id)).toEqual(['boost_dash']);
+    expect(equippedSecond.map((skill) => skill.id)).toEqual(['boost_dash', 'sharp_turn']);
+    expect(replacedWhenFull.map((skill) => skill.id)).toEqual(['boost_dash', 'paper_shield']);
+    expect(unequipSkill(replacedWhenFull, 0).map((skill) => skill.id)).toEqual(['paper_shield']);
   });
 });
