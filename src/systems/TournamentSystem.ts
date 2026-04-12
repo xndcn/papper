@@ -14,6 +14,7 @@ import type {
   TournamentNodeType,
   TournamentRun,
 } from '@/types';
+import { isBossOpponent } from '@/utils/opponentUtils';
 import { createRNG, randomInt, shuffle, weightedChoice } from '@/utils/SeedManager';
 
 const DEFAULT_LAYER_COUNT = 5;
@@ -25,10 +26,29 @@ const NODE_TYPE_OPTIONS = ['race', 'shop', 'event', 'elite'] as const;
 const NODE_TYPE_WEIGHTS = [6, 2, 2, 1] as const;
 const MIN_BASE_DIFFICULTY = 2;
 const BASE_DIFFICULTY_RANGE = 6;
+const CLASS_BOSS_DIFFICULTY = 7;
 const VICTORY_BONUS_COINS = 60;
 const DEFEAT_BONUS_COINS = 20;
 const BASE_OPPONENT_WEIGHT = 6;
 const FNV_PRIME_32 = 16777619;
+const NON_BOSS_SELECTION_PENALTY = 8;
+
+export function createTournamentRun(seed: number, layerCount = DEFAULT_LAYER_COUNT): TournamentRun {
+  return {
+    seed,
+    map: generateTournamentMap(seed, layerCount),
+    currentNodeId: '',
+    visitedNodeIds: [],
+    currentLayer: -1,
+    collectedParts: [],
+    activeBuffs: [],
+    runCoins: 0,
+    runSkills: [],
+    raceResults: [],
+    startedAt: Date.now(),
+    status: 'in_progress',
+  };
+}
 
 export function generateTournamentMap(seed: number, layerCount = DEFAULT_LAYER_COUNT): TournamentMap {
   if (!Number.isInteger(layerCount) || layerCount < 1) {
@@ -171,6 +191,10 @@ export function abandonRun(run: TournamentRun): TournamentRun {
   };
 }
 
+export function getNodeById(map: TournamentMap, nodeId: string): TournamentNode | undefined {
+  return findNodeById(map, nodeId);
+}
+
 function createLayer(
   seed: number,
   layerIndex: number,
@@ -229,14 +253,16 @@ function resolveNodeDifficulty(
   type: TournamentNodeType,
   rng: () => number,
 ): number {
+  if (type === 'boss') {
+    return CLASS_BOSS_DIFFICULTY;
+  }
+
   const progress = layerCount <= 1 ? 1 : layerIndex / (layerCount - 1);
   const baseDifficulty = MIN_BASE_DIFFICULTY + Math.round(progress * BASE_DIFFICULTY_RANGE);
   const bonus =
     type === 'elite'
       ? 2
-      : type === 'boss'
-        ? 4
-        : type === 'shop' || type === 'event'
+      : type === 'shop' || type === 'event'
           ? 0
           : 1;
 
@@ -338,12 +364,7 @@ function scoreOpponent(
   type: Extract<TournamentNodeType, 'race' | 'elite' | 'boss'>,
 ): number {
   const difficultyDelta = Math.abs(opponent.difficulty - difficulty);
-  const typePenalty =
-    type === 'boss'
-      ? Math.max(0, 8 - opponent.difficulty)
-      : type === 'elite'
-        ? Math.max(0, 6 - opponent.difficulty)
-        : Math.max(0, opponent.difficulty - difficulty);
+  const typePenalty = resolveOpponentTypePenalty(opponent, difficulty, type, difficultyDelta);
 
   return difficultyDelta + typePenalty;
 }
@@ -473,4 +494,22 @@ function isRaceNodeType(
   type: TournamentNodeType,
 ): type is Extract<TournamentNodeType, 'race' | 'elite' | 'boss'> {
   return type === 'race' || type === 'elite' || type === 'boss';
+}
+
+function resolveOpponentTypePenalty(
+  opponent: Opponent,
+  difficulty: number,
+  type: Extract<TournamentNodeType, 'race' | 'elite' | 'boss'>,
+  difficultyDelta: number,
+): number {
+  if (type === 'boss') {
+    const bossPenalty = isBossOpponent(opponent) ? 0 : NON_BOSS_SELECTION_PENALTY;
+    return bossPenalty + difficultyDelta;
+  }
+
+  if (type === 'elite') {
+    return Math.max(0, 6 - opponent.difficulty) + (isBossOpponent(opponent) ? 2 : 0);
+  }
+
+  return Math.max(0, opponent.difficulty - difficulty) + (isBossOpponent(opponent) ? 3 : 0);
 }

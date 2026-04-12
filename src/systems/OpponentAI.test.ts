@@ -3,11 +3,15 @@ import { describe, expect, it } from 'vitest';
 import { calculateAILaunchParams, generateOpponentScore, simulateOpponentFlight } from '@/systems/OpponentAI';
 import type { AirplaneStats, Opponent, Weather } from '@/types';
 
-function createOpponent(personality: Opponent['personality'], difficulty = 2): Opponent {
+function createOpponent(
+  personality: Opponent['personality'],
+  difficulty = 2,
+  overrides: Partial<Pick<Opponent, 'id' | 'title'>> = {},
+): Opponent {
   return {
-    id: `opponent-${personality}`,
+    id: overrides.id ?? `opponent-${personality}`,
     name: '测试对手',
-    title: '试飞员',
+    title: overrides.title ?? '试飞员',
     personality,
     airplaneId: 'test-airplane',
     partIds: [],
@@ -68,6 +72,28 @@ describe('OpponentAI', () => {
     expect(aggressive.angleDegrees).toBeLessThan(cautious.angleDegrees);
     expect(aggressive.angleDegrees).toBeGreaterThanOrEqual(16);
     expect(cautious.angleDegrees).toBeLessThanOrEqual(52);
+  });
+
+  it('gives boss opponents a tighter, more optimized launch profile and stronger simulated runs', () => {
+    const weather = createWeather('calm');
+    const regularOpponent = createOpponent('aggressive', 7, {
+      id: 'regular-opponent',
+      title: '冲刺新人',
+    });
+    const bossOpponent = createOpponent('aggressive', 7, {
+      id: 'gale_lin',
+      title: '班级赛馆主',
+    });
+
+    const regularLaunch = calculateAILaunchParams(regularOpponent, weather);
+    const bossLaunch = calculateAILaunchParams(bossOpponent, weather);
+    const regularFlight = simulateOpponentFlight(regularLaunch, HIGH_STATS, weather, 8, regularOpponent);
+    const bossFlight = simulateOpponentFlight(bossLaunch, HIGH_STATS, weather, 8, bossOpponent);
+
+    expect(bossLaunch.angleDegrees).toBeGreaterThan(regularLaunch.angleDegrees);
+    expect(bossLaunch.power).toBeGreaterThanOrEqual(regularLaunch.power);
+    expect(bossFlight.distancePx).toBeGreaterThan(regularFlight.distancePx);
+    expect(bossFlight.flightTimeMs).toBeGreaterThanOrEqual(regularFlight.flightTimeMs);
   });
 
   it('simulates longer and farther flights for stronger airplane stats', () => {

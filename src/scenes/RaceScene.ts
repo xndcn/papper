@@ -33,6 +33,7 @@ import {
   type PitchControlDirection,
 } from '@/systems/PhysicsSystem';
 import { calculateFlightScore, isFlightOutOfBounds } from '@/systems/RaceSystem';
+import { completeRace } from '@/systems/TournamentSystem';
 import { calculateWindEffect, selectWeather } from '@/systems/WeatherSystem';
 import type {
   AirplaneStats,
@@ -133,6 +134,8 @@ function resolveRaceSceneData(data: RaceSceneData | undefined): Required<RaceSce
     equippedParts,
     weather: data?.weather ?? selectWeather(getWeatherPresets(), Date.now()),
     opponentId: data?.opponentId ?? DEFAULT_OPPONENT.id,
+    tournamentRun: data?.tournamentRun,
+    tournamentNodeId: data?.tournamentNodeId,
   };
 }
 
@@ -219,6 +222,42 @@ function generateRaceSummary({
   }
 
   return `${airplaneName} 原型验证完成：${weather.displayName}会持续施加风力，飞机越界后会结束本轮并结算得分。`;
+}
+
+/**
+ * Converts the live race outcome into the compact TournamentSystem result shape
+ * used for run progression, rewards, and return-to-map flow after ResultScene.
+ */
+function createTournamentRaceResult({
+  nodeId,
+  playerRank,
+  rankings,
+  distance,
+  flightTimeMs,
+  weather,
+  opponent,
+  opponentResult,
+}: {
+  readonly nodeId: string;
+  readonly playerRank: number;
+  readonly rankings: readonly RaceParticipantResult[];
+  readonly distance: number;
+  readonly flightTimeMs: number;
+  readonly weather: Weather;
+  readonly opponent: Opponent;
+  readonly opponentResult?: OpponentRaceResult;
+}) {
+  return {
+    raceId: nodeId,
+    score: rankings.find((entry) => entry.isPlayer)?.score ?? 0,
+    distance,
+    airTime: flightTimeMs,
+    trickScore: 0,
+    ranking: playerRank,
+    totalParticipants: rankings.length,
+    weather,
+    opponentScores: opponentResult ? [{ opponentId: opponent.id, score: opponentResult.score }] : [],
+  } as const;
 }
 
 export class RaceScene extends Phaser.Scene {
@@ -713,6 +752,7 @@ export class RaceScene extends Phaser.Scene {
       this.opponentStats,
       this.weather,
       AI_SIMULATION_DURATION_SECONDS,
+      this.opponent,
     );
     const simulatedOpponentScore = generateOpponentScore(simulatedOpponentFlight);
     this.opponentResult = {
@@ -808,7 +848,8 @@ export class RaceScene extends Phaser.Scene {
       playerName: this.airplaneName,
       opponentResult: this.opponentResult,
       rankings,
-      replayData: this.currentRaceSceneData,
+      airplaneId: this.currentRaceSceneData.airplaneId,
+      replayData: this.currentRaceSceneData.tournamentRun ? undefined : this.currentRaceSceneData,
       scoreBreakdown: {
         distanceScore: score.distanceScore,
         airtimeScore: score.airtimeScore,
@@ -823,6 +864,25 @@ export class RaceScene extends Phaser.Scene {
         weather: this.weather,
       }),
     };
+
+    if (this.currentRaceSceneData.tournamentRun && this.currentRaceSceneData.tournamentNodeId) {
+      this.resultData = {
+        ...this.resultData,
+        nextTournamentRun: completeRace(
+          this.currentRaceSceneData.tournamentRun,
+          createTournamentRaceResult({
+            nodeId: this.currentRaceSceneData.tournamentNodeId,
+            playerRank,
+            rankings,
+            distance,
+            flightTimeMs,
+            weather: this.weather,
+            opponent: this.opponent,
+            opponentResult: this.opponentResult,
+          }),
+        ),
+      };
+    }
 
     this.finishButton?.setAlpha(1);
     this.updateProgressMarkers(distance, this.opponentResult?.distance ?? 0);

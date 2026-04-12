@@ -4,6 +4,7 @@ import { getParts, getSkills, getWeatherPresets } from '@/systems/ContentLoader'
 import {
   abandonRun,
   completeRace,
+  createTournamentRun,
   generateTournamentMap,
   getAvailableNodes,
   getRunRewards,
@@ -47,6 +48,20 @@ function createRaceResult(overrides: Partial<RaceResult> = {}): RaceResult {
 }
 
 describe('TournamentSystem', () => {
+  it('creates a fresh tournament run and assigns the class boss to the final layer', () => {
+    const run = createTournamentRun(2026);
+    const bossNode = run.map.layers.at(-1)?.[0];
+
+    expect(run.seed).toBe(2026);
+    expect(run.currentNodeId).toBe('');
+    expect(run.currentLayer).toBe(-1);
+    expect(run.visitedNodeIds).toEqual([]);
+    expect(run.status).toBe('in_progress');
+    expect(bossNode?.difficulty).toBeGreaterThanOrEqual(6);
+    expect(bossNode?.difficulty).toBeLessThanOrEqual(7);
+    expect(bossNode?.opponent?.id).toBe('gale_lin');
+  });
+
   it('generates deterministic maps with layered node structure and valid connections', () => {
     const firstMap = generateTournamentMap(2026);
     const secondMap = generateTournamentMap(2026);

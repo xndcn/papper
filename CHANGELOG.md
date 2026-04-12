@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### 变更
+- 完成 Phase 2 Step 6：新增 TournamentMapScene 锦标赛地图、班级赛馆主林小冲、馆主 AI 优化与 MainMenu → TournamentMap → Build → Race → Result → TournamentMap 的场景闭环
 - 完成 Phase 2 Step 5：新增 ProgressSystem Meta 进度纯逻辑，补齐经验等级计算、内容解锁条件、Run 结算经验与玩家累计统计更新，并新增对应单元测试
 - 完成 Phase 2 Step 4：引入 Dexie.js 存档层与 GameState 全局状态单例，补齐存档 schema 校验、导入导出、自动存档回退与 fake-indexeddb 单元测试
 - 完成 Phase 2 Step 3：新增 TournamentSystem 锦标赛核心逻辑、SeedManager 确定性随机工具，扩充锦标赛对手内容，并补齐对应单元测试与验证
@@ -22,6 +23,11 @@
 - 主场景现在会在中文 Web Font 加载完成后再创建 Phaser 实例，修复无中文系统字体环境下的方块字问题
 
 ### 新增
+- Phase 2 Step 6 锦标赛地图与馆主对手：
+  - 新增 `src/scenes/TournamentMapScene.ts`，提供节点渲染、路径连线、节点详情面板、进度摘要与“放弃 Run”入口
+  - 扩展 `src/types/index.ts`、`src/config/constants.ts` 与主场景流转，打通 MainMenu → TournamentMap → Build → Race → Result → TournamentMap 的循环流程
+  - 扩展 `src/systems/TournamentSystem.ts` 与 `src/systems/OpponentAI.ts`，补齐初始 TournamentRun 创建、班级赛 Boss 难度、馆主筛选、馆主 AI 发射优化与飞行加成模拟
+  - 扩展 `src/data/opponents.json`、`ContentLoader` / `TournamentSystem` / `OpponentAI` 测试，新增班级赛馆主林小冲并覆盖 Phase 2 Step 6 关键断言
 - Phase 2 Step 5 Meta 进度系统：
   - 新增 `src/systems/ProgressSystem.ts`，提供经验累计升级、等级阈值查询、Meta 解锁条件判断、内容池解锁、Run 经验结算与玩家统计更新
   - 新增 `src/systems/ProgressSystem.test.ts`，覆盖经验-等级映射、升级边界、解锁条件、内容池分层与 Run 结算经验范围

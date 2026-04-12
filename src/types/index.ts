@@ -158,14 +158,18 @@ export interface ResultSceneData {
   readonly score: number;
   readonly summary: string;
   readonly playerName?: string;
+  readonly airplaneId?: string;
   readonly opponentResult?: OpponentRaceResult;
   readonly rankings?: readonly RaceParticipantResult[];
   readonly replayData?: RaceSceneData;
   readonly scoreBreakdown?: ScoreBreakdown;
+  readonly nextTournamentRun?: TournamentRun;
 }
 
 export interface BuildSceneData {
   readonly airplaneId?: string;
+  readonly tournamentRun?: TournamentRun;
+  readonly raceConfig?: RaceConfig;
 }
 
 export interface RaceSceneData {
@@ -175,6 +179,14 @@ export interface RaceSceneData {
   readonly equippedParts?: readonly Part[];
   readonly weather?: Weather;
   readonly opponentId?: string;
+  readonly tournamentRun?: TournamentRun;
+  readonly tournamentNodeId?: string;
+}
+
+export interface TournamentMapSceneData {
+  readonly run?: TournamentRun;
+  readonly airplaneId?: string;
+  readonly message?: string;
 }
 
 export interface RaceConfig {
