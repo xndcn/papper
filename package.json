@@ -24,6 +24,7 @@
   "packageManager": "pnpm@10.33.0",
   "dependencies": {
     "@fontsource/noto-sans-sc": "5.2.9",
+    "dexie": "4.4.2",
     "phaser": "3.90.0"
   },
   "devDependencies": {
@@ -31,6 +32,7 @@
     "@vitest/coverage-v8": "4.1.4",
     "eslint": "9.39.4",
     "eslint-config-prettier": "10.1.8",
+    "fake-indexeddb": "6.2.5",
     "globals": "17.4.0",
     "prettier": "3.8.2",
     "typescript": "5.9.3",

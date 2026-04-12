@@ -173,26 +173,26 @@
   - [x] 单元测试：地图生成确定性（同种子同结果）、节点类型分布合理性、Run 状态流转、种子管理器
   - [x] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过
 
-- [ ] **Step 4: IndexedDB 存档系统（Dexie.js + SaveManager）**
-  - [ ] 安装 Dexie.js 依赖（`pnpm add dexie`）
-  - [ ] 创建 `src/systems/SaveManager.ts`：基于 Dexie.js 封装 IndexedDB 的异步存储模块
-    - [ ] `initialize() → Promise<void>` — 初始化数据库连接，创建 stores（saves / settings / cache）
-    - [ ] `saveGame(data: SaveData) → Promise<void>` — 保存游戏存档（写入前 schema 校验）
-    - [ ] `loadGame() → Promise<SaveData | null>` — 加载游戏存档
-    - [ ] `deleteSave() → Promise<void>` — 删除存档
-    - [ ] `hasSave() → Promise<boolean>` — 检查是否有存档
-    - [ ] `autoSave(data: SaveData) → Promise<void>` — 自动存档（写入 auto_save key）
-    - [ ] `saveSettings(settings: GameSettings) → Promise<void>` — 保存用户设置
-    - [ ] `loadSettings() → Promise<GameSettings | null>` — 加载用户设置
-    - [ ] `exportSave() → Promise<string>` — 导出存档为 JSON 字符串
-    - [ ] `importSave(json: string) → Promise<void>` — 导入存档（含版本校验）
-    - [ ] `createDefaultSaveData() → SaveData` — 创建初始默认存档数据
-  - [ ] 创建 `src/utils/GameState.ts`：全局游戏状态单例（参照 architecture.md「状态管理方案」章节）
-    - [ ] 持有 `currentSaveData` 和 `currentRun`
-    - [ ] 提供 `getSaveData()` / `getCurrentRun()` / `updateSaveData()` / `updateRun()` 不可变更新接口
-    - [ ] 集成事件发射（saveDataChanged / runChanged）
-  - [ ] 单元测试：SaveManager CRUD 操作（使用 fake-indexeddb 测试）、schema 校验、存档导入导出、GameState 状态管理
-  - [ ] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过，`pnpm build` 成功
+- [x] **Step 4: IndexedDB 存档系统（Dexie.js + SaveManager）**
+  - [x] 安装 Dexie.js 依赖（`pnpm add dexie`）
+  - [x] 创建 `src/systems/SaveManager.ts`：基于 Dexie.js 封装 IndexedDB 的异步存储模块
+    - [x] `initialize() → Promise<void>` — 初始化数据库连接，创建 stores（saves / settings / cache）
+    - [x] `saveGame(data: SaveData) → Promise<void>` — 保存游戏存档（写入前 schema 校验）
+    - [x] `loadGame() → Promise<SaveData | null>` — 加载游戏存档
+    - [x] `deleteSave() → Promise<void>` — 删除存档
+    - [x] `hasSave() → Promise<boolean>` — 检查是否有存档
+    - [x] `autoSave(data: SaveData) → Promise<void>` — 自动存档（写入 auto_save key）
+    - [x] `saveSettings(settings: GameSettings) → Promise<void>` — 保存用户设置
+    - [x] `loadSettings() → Promise<GameSettings | null>` — 加载用户设置
+    - [x] `exportSave() → Promise<string>` — 导出存档为 JSON 字符串
+    - [x] `importSave(json: string) → Promise<void>` — 导入存档（含版本校验）
+    - [x] `createDefaultSaveData() → SaveData` — 创建初始默认存档数据
+  - [x] 创建 `src/utils/GameState.ts`：全局游戏状态单例（参照 architecture.md「状态管理方案」章节）
+    - [x] 持有 `currentSaveData` 和 `currentRun`
+    - [x] 提供 `getSaveData()` / `getCurrentRun()` / `updateSaveData()` / `updateRun()` 不可变更新接口
+    - [x] 集成事件发射（saveDataChanged / runChanged）
+  - [x] 单元测试：SaveManager CRUD 操作（使用 fake-indexeddb 测试）、schema 校验、存档导入导出、GameState 状态管理
+  - [x] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过，`pnpm build` 成功
 
 - [ ] **Step 5: Meta 进度系统（ProgressSystem）**
   - [ ] 创建 `src/systems/ProgressSystem.ts`：跨 Run 永久进度管理纯逻辑模块
