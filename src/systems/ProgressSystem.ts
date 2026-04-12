@@ -4,6 +4,8 @@ import type { MetaProgress, PlayerProfile, RaceResult, TournamentRun } from '@/t
 const MAX_META_LEVEL = 30;
 const COMMON_RARITY = 'common';
 const LEGENDARY_RARITY = 'legendary';
+const RARE_CONTENT_UNLOCK_LEVEL = 6;
+const LEGENDARY_CONTENT_UNLOCK_LEVEL = 16;
 const BASE_VICTORY_EXPERIENCE = 100;
 const MAX_VICTORY_EXPERIENCE = 150;
 const BASE_DEFEAT_EXPERIENCE = 60;
@@ -48,16 +50,20 @@ export function addExperience(meta: MetaProgress, amount: number): MetaProgress 
 export function getMetaLevel(experience: number): number {
   assertNonNegativeFiniteNumber(experience, 'experience');
 
-  let resolvedLevel = 1;
+  let low = 1;
+  let high = MAX_META_LEVEL;
 
-  for (let level = 1; level <= MAX_META_LEVEL; level += 1) {
-    if (experience < getExperienceForLevel(level)) {
-      break;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+
+    if (experience < getExperienceForLevel(mid)) {
+      high = mid - 1;
+    } else {
+      low = mid + 1;
     }
-    resolvedLevel = level;
   }
 
-  return resolvedLevel;
+  return Math.max(1, high);
 }
 
 export function getExperienceForLevel(level: number): number {
@@ -83,9 +89,7 @@ export function getExperienceForLevel(level: number): number {
 }
 
 export function checkUnlockConditions(meta: MetaProgress, condition: UnlockCondition): boolean {
-  const level = Math.max(meta.level, getMetaLevel(meta.experience));
-
-  if (condition.minLevel !== undefined && level < condition.minLevel) {
+  if (condition.minLevel !== undefined && meta.level < condition.minLevel) {
     return false;
   }
 
@@ -116,25 +120,29 @@ export function checkUnlockConditions(meta: MetaProgress, condition: UnlockCondi
 }
 
 export function getUnlockedContent(meta: MetaProgress): UnlockedContent {
-  const level = Math.max(meta.level, getMetaLevel(meta.experience));
-
   return {
     airplanes: getAirplanes().map((airplane) => airplane.id),
     skills: getSkills()
-      .filter((skill) => level >= 16 || skill.rarity !== LEGENDARY_RARITY)
+      .filter((skill) => meta.level >= LEGENDARY_CONTENT_UNLOCK_LEVEL || skill.rarity !== LEGENDARY_RARITY)
       .map((skill) => skill.id),
     partPool: getParts()
-      .filter((part) => level >= 6 || part.rarity === COMMON_RARITY)
-      .filter((part) => level >= 16 || part.rarity !== LEGENDARY_RARITY)
+      .filter((part) => meta.level >= RARE_CONTENT_UNLOCK_LEVEL || part.rarity === COMMON_RARITY)
+      .filter((part) => meta.level >= LEGENDARY_CONTENT_UNLOCK_LEVEL || part.rarity !== LEGENDARY_RARITY)
       .map((part) => part.id),
   };
 }
 
 export function calculateRunRewardExperience(runResult: TournamentRun, isVictory: boolean): number {
-  const totalLayers = Math.max(1, runResult.map.totalLayers);
-  const visitedProgress = runResult.visitedNodeIds.length / totalLayers;
+  if (runResult.map.totalLayers <= 0) {
+    throw new Error('runResult.map.totalLayers must be greater than 0');
+  }
+  if (runResult.currentLayer < 0 || runResult.currentLayer >= runResult.map.totalLayers) {
+    throw new Error('runResult.currentLayer must be within the available layer range');
+  }
+
+  const totalLayers = runResult.map.totalLayers;
   const layerProgress = (runResult.currentLayer + 1) / totalLayers;
-  const normalizedProgress = clamp(Math.max(visitedProgress, layerProgress), 0, 1);
+  const normalizedProgress = clamp(layerProgress, 0, 1);
 
   if (isVictory) {
     return Math.round(

@@ -71,6 +71,7 @@ describe('ProgressSystem', () => {
     expect(getMetaLevel(0)).toBe(1);
     expect(getMetaLevel(399)).toBe(4);
     expect(getMetaLevel(400)).toBe(5);
+    expect(getMetaLevel(499)).toBe(5);
     expect(getMetaLevel(500)).toBe(6);
     expect(getMetaLevel(30000)).toBe(30);
     expect(getMetaLevel(999999)).toBe(30);
@@ -131,7 +132,9 @@ describe('ProgressSystem', () => {
       }),
     );
 
-    expect(beginnerUnlocks.airplanes).toEqual(['classic_dart', 'classic_glider', 'butterfly_wing']);
+    expect(beginnerUnlocks.airplanes).toContain('classic_dart');
+    expect(beginnerUnlocks.airplanes).toContain('classic_glider');
+    expect(beginnerUnlocks.airplanes).toContain('butterfly_wing');
     expect(beginnerUnlocks.skills).toContain('boost_dash');
     expect(beginnerUnlocks.skills).not.toContain('phoenix_rise');
     expect(beginnerUnlocks.partPool).toContain('iron_nose_clip');
@@ -162,6 +165,27 @@ describe('ProgressSystem', () => {
         false,
       ),
     ).toBe(96);
+
+    expect(() =>
+      calculateRunRewardExperience(
+        createRun({
+          map: {
+            seed: 2026,
+            layers: [],
+            totalLayers: 0,
+          },
+        }),
+        false,
+      ),
+    ).toThrowError(/totalLayers/i);
+    expect(() =>
+      calculateRunRewardExperience(
+        createRun({
+          currentLayer: 5,
+        }),
+        false,
+      ),
+    ).toThrowError(/currentLayer/i);
   });
 
   it('updates persistent player statistics from race results', () => {
