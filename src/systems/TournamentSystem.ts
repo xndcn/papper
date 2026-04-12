@@ -19,7 +19,12 @@ import { createRNG, randomInt, shuffle, weightedChoice } from '@/utils/SeedManag
 const DEFAULT_LAYER_COUNT = 5;
 const MIN_NODES_PER_LAYER = 2;
 const MAX_NODES_PER_LAYER = 3;
+const HORIZONTAL_LAYER_PADDING = 40;
 const LAYER_VERTICAL_PADDING = 40;
+const NODE_TYPE_OPTIONS = ['race', 'shop', 'event', 'elite'] as const;
+const NODE_TYPE_WEIGHTS = [6, 2, 2, 1] as const;
+const MIN_BASE_DIFFICULTY = 2;
+const BASE_DIFFICULTY_RANGE = 6;
 const VICTORY_BONUS_COINS = 60;
 const DEFEAT_BONUS_COINS = 20;
 const BASE_OPPONENT_WEIGHT = 6;
@@ -215,7 +220,7 @@ function resolveNodeType(
     return 'elite';
   }
 
-  return weightedChoice(rng, ['race', 'shop', 'event', 'elite'] as const, [6, 2, 2, 1]);
+  return weightedChoice(rng, NODE_TYPE_OPTIONS, NODE_TYPE_WEIGHTS);
 }
 
 function resolveNodeDifficulty(
@@ -225,7 +230,7 @@ function resolveNodeDifficulty(
   rng: () => number,
 ): number {
   const progress = layerCount <= 1 ? 1 : layerIndex / (layerCount - 1);
-  const baseDifficulty = 2 + Math.round(progress * 6);
+  const baseDifficulty = MIN_BASE_DIFFICULTY + Math.round(progress * BASE_DIFFICULTY_RANGE);
   const bonus =
     type === 'elite'
       ? 2
@@ -244,12 +249,12 @@ function resolveNodePosition(
   nodeIndex: number,
   nodeCount: number,
 ): TournamentNode['position'] {
-  const usableWidth = GAME_WIDTH - 80;
+  const usableWidth = GAME_WIDTH - HORIZONTAL_LAYER_PADDING * 2;
   const stepX = nodeCount === 1 ? 0 : usableWidth / Math.max(1, nodeCount - 1);
   const stepY = layerCount <= 1 ? 0 : (GAME_HEIGHT - LAYER_VERTICAL_PADDING * 2) / Math.max(1, layerCount - 1);
 
   return {
-    x: 40 + stepX * nodeIndex,
+    x: HORIZONTAL_LAYER_PADDING + stepX * nodeIndex,
     y: LAYER_VERTICAL_PADDING + stepY * layerIndex,
   };
 }
@@ -411,18 +416,16 @@ function applyRewards(run: TournamentRun, rewards: readonly Reward[]): Tournamen
       case 'part':
         return {
           ...currentRun,
-          collectedParts:
-            typeof reward.value === 'object' && 'slot' in reward.value
-              ? appendUniqueById(currentRun.collectedParts, reward.value)
-              : currentRun.collectedParts,
+          collectedParts: isRewardPart(reward.value)
+            ? appendUniqueById(currentRun.collectedParts, reward.value)
+            : currentRun.collectedParts,
         };
       case 'skill':
         return {
           ...currentRun,
-          runSkills:
-            typeof reward.value === 'object' && 'effect' in reward.value
-              ? appendUniqueById(currentRun.runSkills, reward.value)
-              : currentRun.runSkills,
+          runSkills: isRewardSkill(reward.value)
+            ? appendUniqueById(currentRun.runSkills, reward.value)
+            : currentRun.runSkills,
         };
       case 'airplane_unlock':
       default:
@@ -433,6 +436,14 @@ function applyRewards(run: TournamentRun, rewards: readonly Reward[]): Tournamen
 
 function appendUniqueById<T extends { readonly id: string }>(items: readonly T[], item: T): readonly T[] {
   return items.some((existingItem) => existingItem.id === item.id) ? items : [...items, item];
+}
+
+function isRewardPart(value: Reward['value']): value is Part {
+  return typeof value === 'object' && value !== null && 'slot' in value && 'statModifiers' in value;
+}
+
+function isRewardSkill(value: Reward['value']): value is Skill {
+  return typeof value === 'object' && value !== null && 'effect' in value && 'iconKey' in value;
 }
 
 function findNodeById(map: TournamentMap, nodeId: string): TournamentNode | undefined {
