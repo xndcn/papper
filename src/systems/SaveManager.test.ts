@@ -31,7 +31,7 @@ describe('SaveManager', () => {
   let databaseName: string;
 
   beforeEach(async () => {
-    databaseName = `paper_wings_legend_test_${crypto.randomUUID()}`;
+    databaseName = `test_pwl_${crypto.randomUUID()}`;
     manager = new SaveManager(databaseName);
     await manager.initialize();
   });

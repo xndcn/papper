@@ -19,6 +19,8 @@ export class GameState {
     runChanged: new Set(),
   };
 
+  private constructor() {}
+
   static getInstance(): GameState {
     if (!GameState.instance) {
       GameState.instance = new GameState();
@@ -123,9 +125,9 @@ export class GameState {
 }
 
 function removeActiveTournamentRun(saveData: SaveData): SaveData {
-  const nextSaveData: Partial<SaveData> = { ...saveData };
-  delete nextSaveData.activeTournamentRun;
-  return nextSaveData as SaveData;
+  const nextSaveData = { ...saveData };
+  Reflect.deleteProperty(nextSaveData, 'activeTournamentRun');
+  return nextSaveData;
 }
 
 function isEqual(left: SaveData | TournamentRun | null, right: SaveData | TournamentRun | null): boolean {

@@ -8,6 +8,7 @@ import type {
   Opponent,
   OpponentPersonality,
   Part,
+  PartSlot,
   PlayerProfile,
   RaceResult,
   Reward,
@@ -16,6 +17,7 @@ import type {
   StoryProgress,
   TournamentMap,
   TournamentNode,
+  TournamentNodeType,
   TournamentRun,
   TriggerType,
   Weather,
@@ -28,7 +30,7 @@ const MAIN_SAVE_KEY = 'main_save';
 const AUTO_SAVE_KEY = 'auto_save';
 const BACKUP_SAVE_KEY = 'backup';
 const SETTINGS_KEY = 'game_settings';
-const PART_SLOTS = ['nose', 'wing', 'tail', 'coating', 'weight'] as const;
+const PART_SLOTS = ['nose', 'wing', 'tail', 'coating', 'weight'] as const satisfies readonly PartSlot[];
 const RARITIES = ['common', 'rare', 'legendary'] as const;
 const SKILL_TYPES = ['active', 'passive'] as const;
 const TRIGGER_TYPES = [
@@ -40,10 +42,13 @@ const TRIGGER_TYPES = [
   'on_low_speed',
   'on_high_altitude',
   'manual',
-] as const;
-const WEATHER_CONDITIONS = ['tailwind', 'headwind', 'crosswind', 'storm', 'calm'] as const;
-const OPPONENT_PERSONALITIES = ['aggressive', 'balanced', 'cautious', 'tricky'] as const;
-const TOURNAMENT_NODE_TYPES = ['race', 'elite', 'shop', 'rest', 'event', 'boss'] as const;
+] as const satisfies readonly TriggerType[];
+const WEATHER_CONDITIONS =
+  ['tailwind', 'headwind', 'crosswind', 'storm', 'calm'] as const satisfies readonly WeatherCondition[];
+const OPPONENT_PERSONALITIES =
+  ['aggressive', 'balanced', 'cautious', 'tricky'] as const satisfies readonly OpponentPersonality[];
+const TOURNAMENT_NODE_TYPES =
+  ['race', 'elite', 'shop', 'rest', 'event', 'boss'] as const satisfies readonly TournamentNodeType[];
 const RUN_STATUSES = ['in_progress', 'victory', 'defeat', 'abandoned'] as const;
 const REWARD_TYPES = ['part', 'coins', 'skill', 'airplane_unlock'] as const;
 const STAT_KEYS = ['speed', 'glide', 'stability', 'trick', 'durability'] as const;
@@ -110,10 +115,12 @@ export class SaveManager {
   async loadGame(): Promise<SaveData | null> {
     await this.ensureInitialized();
 
-    const record =
-      (await this.db.saves.get(MAIN_SAVE_KEY)) ??
-      (await this.db.saves.get(AUTO_SAVE_KEY)) ??
-      (await this.db.saves.get(BACKUP_SAVE_KEY));
+    const [mainSave, autoSave, backupSave] = await Promise.all([
+      this.db.saves.get(MAIN_SAVE_KEY),
+      this.db.saves.get(AUTO_SAVE_KEY),
+      this.db.saves.get(BACKUP_SAVE_KEY),
+    ]);
+    const record = mainSave ?? autoSave ?? backupSave;
 
     return record ? cloneValue(record.value) : null;
   }
@@ -292,7 +299,7 @@ function parsePlayerProfile(value: unknown, path: string): PlayerProfile {
   const profile = expectRecord(value, path);
 
   return {
-    name: expectString(profile.name, `${path}.name`),
+    name: expectNonEmptyString(profile.name, `${path}.name`),
     createdAt: expectNonNegativeNumber(profile.createdAt, `${path}.createdAt`),
     totalPlayTime: expectNonNegativeNumber(profile.totalPlayTime, `${path}.totalPlayTime`),
     totalRaces: expectNonNegativeNumber(profile.totalRaces, `${path}.totalRaces`),
@@ -369,7 +376,7 @@ function parseEquippedLoadout(value: unknown, path: string): SaveData['equippedL
   const parts = expectRecord(loadout.parts, `${path}.parts`);
 
   return {
-    airplaneId: expectString(loadout.airplaneId, `${path}.airplaneId`),
+    airplaneId: expectNonEmptyString(loadout.airplaneId, `${path}.airplaneId`),
     parts: {
       nose: parseNullableString(parts.nose, `${path}.parts.nose`),
       wing: parseNullableString(parts.wing, `${path}.parts.wing`),
@@ -387,7 +394,7 @@ function parseTournamentRun(value: unknown, path: string): TournamentRun {
   return {
     seed: expectInteger(run.seed, `${path}.seed`),
     map: parseTournamentMap(run.map, `${path}.map`),
-    currentNodeId: expectAnyString(run.currentNodeId, `${path}.currentNodeId`),
+    currentNodeId: expectPossiblyEmptyString(run.currentNodeId, `${path}.currentNodeId`),
     visitedNodeIds: expectStringArray(run.visitedNodeIds, `${path}.visitedNodeIds`),
     currentLayer: expectInteger(run.currentLayer, `${path}.currentLayer`),
     collectedParts: expectArray(run.collectedParts, `${path}.collectedParts`).map((part, index) =>
@@ -427,7 +434,7 @@ function parseTournamentNode(value: unknown, path: string): TournamentNode {
   const type = expectLiteral(node.type, TOURNAMENT_NODE_TYPES, `${path}.type`);
 
   return {
-    id: expectString(node.id, `${path}.id`),
+    id: expectNonEmptyString(node.id, `${path}.id`),
     type,
     position: parseVector(node.position, `${path}.position`),
     connections: expectStringArray(node.connections, `${path}.connections`),
@@ -457,7 +464,7 @@ function parseReward(value: unknown, path: string): Reward {
           ? parseSkill(reward.value, `${path}.value`)
           : type === 'coins'
             ? expectNonNegativeNumber(reward.value, `${path}.value`)
-            : expectString(reward.value, `${path}.value`),
+            : expectNonEmptyString(reward.value, `${path}.value`),
     rarity: expectLiteral(reward.rarity, RARITIES, `${path}.rarity`),
   };
 }
@@ -466,14 +473,14 @@ function parseEventData(value: unknown, path: string): TournamentNode['eventData
   const eventData = expectRecord(value, path);
 
   return {
-    id: expectString(eventData.id, `${path}.id`),
-    description: expectString(eventData.description, `${path}.description`),
+    id: expectNonEmptyString(eventData.id, `${path}.id`),
+    description: expectNonEmptyString(eventData.description, `${path}.description`),
     choices: expectArray(eventData.choices, `${path}.choices`).map((choice, index) => {
       const choiceRecord = expectRecord(choice, `${path}.choices[${index}]`);
       const outcome = choiceRecord.outcome;
 
       return {
-        text: expectString(choiceRecord.text, `${path}.choices[${index}].text`),
+        text: expectNonEmptyString(choiceRecord.text, `${path}.choices[${index}].text`),
         outcome: isRewardRecord(outcome)
           ? parseReward(outcome, `${path}.choices[${index}].outcome`)
           : parsePartialAirplaneStats(outcome, `${path}.choices[${index}].outcome`),
@@ -486,7 +493,7 @@ function parseRaceResult(value: unknown, path: string): RaceResult {
   const result = expectRecord(value, path);
 
   return {
-    raceId: expectString(result.raceId, `${path}.raceId`),
+    raceId: expectNonEmptyString(result.raceId, `${path}.raceId`),
     score: expectNumber(result.score, `${path}.score`),
     distance: expectNumber(result.distance, `${path}.distance`),
     airTime: expectNumber(result.airTime, `${path}.airTime`),
@@ -498,7 +505,7 @@ function parseRaceResult(value: unknown, path: string): RaceResult {
       const opponentScore = expectRecord(score, `${path}.opponentScores[${index}]`);
 
       return {
-        opponentId: expectString(opponentScore.opponentId, `${path}.opponentScores[${index}].opponentId`),
+        opponentId: expectNonEmptyString(opponentScore.opponentId, `${path}.opponentScores[${index}].opponentId`),
         score: expectNumber(opponentScore.score, `${path}.opponentScores[${index}].score`),
       };
     }),
@@ -509,9 +516,9 @@ function parsePart(value: unknown, path: string): Part {
   const part = expectRecord(value, path);
 
   return {
-    id: expectString(part.id, `${path}.id`),
-    name: expectString(part.name, `${path}.name`),
-    description: expectString(part.description, `${path}.description`),
+    id: expectNonEmptyString(part.id, `${path}.id`),
+    name: expectNonEmptyString(part.name, `${path}.name`),
+    description: expectNonEmptyString(part.description, `${path}.description`),
     slot: expectLiteral(part.slot, PART_SLOTS, `${path}.slot`),
     rarity: expectLiteral(part.rarity, RARITIES, `${path}.rarity`),
     statModifiers: parsePartialAirplaneStats(part.statModifiers, `${path}.statModifiers`),
@@ -520,7 +527,7 @@ function parsePart(value: unknown, path: string): Part {
       part.synergies === undefined ? undefined : expectStringArray(part.synergies, `${path}.synergies`),
     synergyBonus:
       part.synergyBonus === undefined ? undefined : parsePartialAirplaneStats(part.synergyBonus, `${path}.synergyBonus`),
-    spriteKey: expectString(part.spriteKey, `${path}.spriteKey`),
+    spriteKey: expectNonEmptyString(part.spriteKey, `${path}.spriteKey`),
   };
 }
 
@@ -529,15 +536,14 @@ function parseSkill(value: unknown, path: string): Skill {
   const type = expectLiteral(skill.type, SKILL_TYPES, `${path}.type`);
 
   return {
-    id: expectString(skill.id, `${path}.id`),
-    name: expectString(skill.name, `${path}.name`),
+    id: expectNonEmptyString(skill.id, `${path}.id`),
+    name: expectNonEmptyString(skill.name, `${path}.name`),
     type,
-    description: expectString(skill.description, `${path}.description`),
+    description: expectNonEmptyString(skill.description, `${path}.description`),
     cooldown: skill.cooldown === undefined ? undefined : expectNonNegativeNumber(skill.cooldown, `${path}.cooldown`),
-    trigger:
-      skill.trigger === undefined ? undefined : expectLiteral(skill.trigger, TRIGGER_TYPES, `${path}.trigger`) as TriggerType,
+    trigger: skill.trigger === undefined ? undefined : expectLiteral(skill.trigger, TRIGGER_TYPES, `${path}.trigger`),
     effect: parseSkillEffect(skill.effect, `${path}.effect`),
-    iconKey: expectString(skill.iconKey, `${path}.iconKey`),
+    iconKey: expectNonEmptyString(skill.iconKey, `${path}.iconKey`),
     rarity: expectLiteral(skill.rarity, RARITIES, `${path}.rarity`),
   };
 }
@@ -560,13 +566,13 @@ function parseBuff(value: unknown, path: string): Buff {
   const buff = expectRecord(value, path);
 
   return {
-    id: expectString(buff.id, `${path}.id`),
-    name: expectString(buff.name, `${path}.name`),
-    description: expectString(buff.description, `${path}.description`),
+    id: expectNonEmptyString(buff.id, `${path}.id`),
+    name: expectNonEmptyString(buff.name, `${path}.name`),
+    description: expectNonEmptyString(buff.description, `${path}.description`),
     duration: expectNonNegativeNumber(buff.duration, `${path}.duration`),
     rarity: expectLiteral(buff.rarity, RARITIES, `${path}.rarity`),
     stackable: expectBoolean(buff.stackable, `${path}.stackable`),
-    iconKey: expectString(buff.iconKey, `${path}.iconKey`),
+    iconKey: expectNonEmptyString(buff.iconKey, `${path}.iconKey`),
     statModifiers: parsePartialAirplaneStats(buff.statModifiers, `${path}.statModifiers`),
     specialEffect: parseOptionalString(buff.specialEffect, `${path}.specialEffect`),
     sourceSkillId: parseOptionalString(buff.sourceSkillId, `${path}.sourceSkillId`),
@@ -578,16 +584,16 @@ function parseOpponent(value: unknown, path: string): Opponent {
   const opponent = expectRecord(value, path);
 
   return {
-    id: expectString(opponent.id, `${path}.id`),
-    name: expectString(opponent.name, `${path}.name`),
-    title: expectString(opponent.title, `${path}.title`),
-    personality: expectLiteral(opponent.personality, OPPONENT_PERSONALITIES, `${path}.personality`) as OpponentPersonality,
-    airplaneId: expectString(opponent.airplaneId, `${path}.airplaneId`),
+    id: expectNonEmptyString(opponent.id, `${path}.id`),
+    name: expectNonEmptyString(opponent.name, `${path}.name`),
+    title: expectNonEmptyString(opponent.title, `${path}.title`),
+    personality: expectLiteral(opponent.personality, OPPONENT_PERSONALITIES, `${path}.personality`),
+    airplaneId: expectNonEmptyString(opponent.airplaneId, `${path}.airplaneId`),
     partIds: expectStringArray(opponent.partIds, `${path}.partIds`),
     dialogues: parseOpponentDialogues(opponent.dialogues, `${path}.dialogues`),
     difficulty: expectInteger(opponent.difficulty, `${path}.difficulty`),
-    spriteKey: expectString(opponent.spriteKey, `${path}.spriteKey`),
-    backstory: expectString(opponent.backstory, `${path}.backstory`),
+    spriteKey: expectNonEmptyString(opponent.spriteKey, `${path}.spriteKey`),
+    backstory: expectNonEmptyString(opponent.backstory, `${path}.backstory`),
   };
 }
 
@@ -595,11 +601,11 @@ function parseOpponentDialogues(value: unknown, path: string): Opponent['dialogu
   const dialogues = expectRecord(value, path);
 
   return {
-    greeting: expectString(dialogues.greeting, `${path}.greeting`),
-    onWin: expectString(dialogues.onWin, `${path}.onWin`),
-    onLose: expectString(dialogues.onLose, `${path}.onLose`),
-    taunt: expectString(dialogues.taunt, `${path}.taunt`),
-    respect: expectString(dialogues.respect, `${path}.respect`),
+    greeting: expectNonEmptyString(dialogues.greeting, `${path}.greeting`),
+    onWin: expectNonEmptyString(dialogues.onWin, `${path}.onWin`),
+    onLose: expectNonEmptyString(dialogues.onLose, `${path}.onLose`),
+    taunt: expectNonEmptyString(dialogues.taunt, `${path}.taunt`),
+    respect: expectNonEmptyString(dialogues.respect, `${path}.respect`),
   };
 }
 
@@ -607,13 +613,13 @@ function parseWeather(value: unknown, path: string): Weather {
   const weather = expectRecord(value, path);
 
   return {
-    id: expectString(weather.id, `${path}.id`),
-    condition: expectLiteral(weather.condition, WEATHER_CONDITIONS, `${path}.condition`) as WeatherCondition,
+    id: expectNonEmptyString(weather.id, `${path}.id`),
+    condition: expectLiteral(weather.condition, WEATHER_CONDITIONS, `${path}.condition`),
     windDirection: parseVector(weather.windDirection, `${path}.windDirection`),
     windStrength: expectNumber(weather.windStrength, `${path}.windStrength`),
     effects: parseWeatherEffects(weather.effects, `${path}.effects`),
-    displayName: expectString(weather.displayName, `${path}.displayName`),
-    description: expectString(weather.description, `${path}.description`),
+    displayName: expectNonEmptyString(weather.displayName, `${path}.displayName`),
+    description: expectNonEmptyString(weather.description, `${path}.description`),
     weight: expectNonNegativeNumber(weather.weight, `${path}.weight`),
   };
 }
@@ -657,7 +663,7 @@ function parseOptionalString(value: unknown, path: string): string | undefined {
     return undefined;
   }
 
-  return expectString(value, path);
+  return expectNonEmptyString(value, path);
 }
 
 function parseNullableString(value: unknown, path: string): string | null {
@@ -665,7 +671,7 @@ function parseNullableString(value: unknown, path: string): string | null {
     return null;
   }
 
-  return expectString(value, path);
+  return expectNonEmptyString(value, path);
 }
 
 function expectRecord(value: unknown, path: string): Record<string, unknown> {
@@ -684,7 +690,7 @@ function expectArray(value: unknown, path: string): readonly unknown[] {
   return value;
 }
 
-function expectString(value: unknown, path: string): string {
+function expectNonEmptyString(value: unknown, path: string): string {
   if (typeof value !== 'string' || value.length === 0) {
     throw new Error(`${path} must be a non-empty string`);
   }
@@ -692,7 +698,7 @@ function expectString(value: unknown, path: string): string {
   return value;
 }
 
-function expectAnyString(value: unknown, path: string): string {
+function expectPossiblyEmptyString(value: unknown, path: string): string {
   if (typeof value !== 'string') {
     throw new Error(`${path} must be a string`);
   }
@@ -701,7 +707,7 @@ function expectAnyString(value: unknown, path: string): string {
 }
 
 function expectStringArray(value: unknown, path: string): readonly string[] {
-  return expectArray(value, path).map((entry, index) => expectString(entry, `${path}[${index}]`));
+  return expectArray(value, path).map((entry, index) => expectNonEmptyString(entry, `${path}[${index}]`));
 }
 
 function expectBoolean(value: unknown, path: string): boolean {
@@ -761,15 +767,32 @@ function expectUnitInterval(value: unknown, path: string): number {
 }
 
 function expectLiteral<const T extends readonly string[]>(value: unknown, allowed: T, path: string): T[number] {
-  if (typeof value !== 'string' || !allowed.includes(value as T[number])) {
+  if (typeof value !== 'string') {
     throw new Error(`${path} must be one of: ${allowed.join(', ')}`);
   }
 
-  return value as T[number];
+  const matched = allowed.find((item) => item === value);
+
+  if (!matched) {
+    throw new Error(`${path} must be one of: ${allowed.join(', ')}`);
+  }
+
+  return matched;
 }
 
 function isRewardRecord(value: unknown): boolean {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) && 'type' in value && 'rarity' in value;
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+
+  return (
+    typeof record.type === 'string' &&
+    REWARD_TYPES.includes(record.type as (typeof REWARD_TYPES)[number]) &&
+    typeof record.rarity === 'string' &&
+    RARITIES.includes(record.rarity as (typeof RARITIES)[number])
+  );
 }
 
 function cloneValue<T>(value: T): T {
