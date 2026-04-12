@@ -51,6 +51,10 @@ const ABANDON_BUTTON: SceneNavigationButton = {
   label: '放弃 Run',
   target: SCENE_KEYS.MAIN_MENU,
 };
+const NODE_CENTER_X_OFFSET = 24;
+const NODE_CENTER_Y_OFFSET = 12;
+const NODE_LABEL_Y_OFFSET = 34;
+const CONNECTION_Y_OFFSET = 52;
 
 function formatNodeTypeLabel(type: TournamentNodeType): string {
   switch (type) {
@@ -80,7 +84,7 @@ function describeNode(node: TournamentNode): string {
   }
 
   if (node.type === 'shop') {
-    return `补给橱窗：${node.shopInventory?.map((part) => part.name).join('、') ?? '待补货'}\n可先占位推进路径，后续 Step 再扩展购买逻辑。`;
+    return buildShopNodeDescription(node);
   }
 
   if (node.type === 'event') {
@@ -88,6 +92,12 @@ function describeNode(node: TournamentNode): string {
   }
 
   return '短暂整理纸翼状态后继续推进。';
+}
+
+function buildShopNodeDescription(node: TournamentNode): string {
+  const inventorySummary =
+    node.shopInventory && node.shopInventory.length > 0 ? node.shopInventory.map((part) => part.name).join('、') : '待补货';
+  return `补给橱窗：${inventorySummary}\n先记录本层补给信息，再继续前往下一层路径。`;
 }
 
 export class TournamentMapScene extends Phaser.Scene {
@@ -100,6 +110,7 @@ export class TournamentMapScene extends Phaser.Scene {
   private infoBodyText?: Phaser.GameObjects.Text;
   private confirmButton?: Phaser.GameObjects.Text;
   private feedbackText?: Phaser.GameObjects.Text;
+  private abandonButton?: Phaser.GameObjects.Text;
 
   constructor() {
     super(SCENE_KEYS.TOURNAMENT_MAP);
@@ -164,8 +175,8 @@ export class TournamentMapScene extends Phaser.Scene {
           const isVisitedPath = visitedNodeIds.has(node.id) && visitedNodeIds.has(targetNode.id);
           graphics.lineStyle(2, isVisitedPath ? 0x64748b : 0x334155, isVisitedPath ? 0.9 : 0.55);
           graphics.beginPath();
-          graphics.moveTo(node.position.x + 24, node.position.y + 52);
-          graphics.lineTo(targetNode.position.x + 24, targetNode.position.y + 52);
+          graphics.moveTo(node.position.x + NODE_CENTER_X_OFFSET, node.position.y + CONNECTION_Y_OFFSET);
+          graphics.lineTo(targetNode.position.x + NODE_CENTER_X_OFFSET, targetNode.position.y + CONNECTION_Y_OFFSET);
           graphics.strokePath();
         }
       }
@@ -181,11 +192,21 @@ export class TournamentMapScene extends Phaser.Scene {
         const isAvailable = availableNodeIds.has(node.id);
         const isVisited = visitedNodeIds.has(node.id);
         const container = this.add.container(node.position.x, node.position.y + 40);
-        const nodeBadge = this.add.circle(24, 12, 13, NODE_COLORS[node.type], isVisited ? 0.4 : isAvailable ? 1 : 0.72);
-        const nodeLabel = this.add.text(24, 12, NODE_LABELS[node.type], SCENE_SUBTITLE_STYLE).setOrigin(0.5);
+        const nodeBadge = this.add.circle(
+          NODE_CENTER_X_OFFSET,
+          NODE_CENTER_Y_OFFSET,
+          13,
+          NODE_COLORS[node.type],
+          isVisited ? 0.4 : isAvailable ? 1 : 0.72,
+        );
+        const nodeLabel = this.add
+          .text(NODE_CENTER_X_OFFSET, NODE_CENTER_Y_OFFSET, NODE_LABELS[node.type], SCENE_SUBTITLE_STYLE)
+          .setOrigin(0.5);
 
         if (isAvailable) {
-          const highlight = this.add.circle(24, 12, 18).setStrokeStyle(2, 0xf8fafc, 0.85);
+          const highlight = this.add
+            .circle(NODE_CENTER_X_OFFSET, NODE_CENTER_Y_OFFSET, 18)
+            .setStrokeStyle(2, 0xf8fafc, 0.85);
           this.tweens.add({
             targets: highlight,
             alpha: { from: 0.4, to: 1 },
@@ -197,11 +218,11 @@ export class TournamentMapScene extends Phaser.Scene {
         }
 
         if (this.currentRun.currentNodeId === node.id) {
-          container.add(this.add.circle(24, 12, 22).setStrokeStyle(2, 0xf8fafc, 1));
+          container.add(this.add.circle(NODE_CENTER_X_OFFSET, NODE_CENTER_Y_OFFSET, 22).setStrokeStyle(2, 0xf8fafc, 1));
         }
 
         container.add([nodeBadge, nodeLabel]);
-        container.add(this.add.text(24, 34, formatNodeTypeLabel(node.type), SCENE_HINT_STYLE).setOrigin(0.5));
+        container.add(this.add.text(NODE_CENTER_X_OFFSET, NODE_LABEL_Y_OFFSET, formatNodeTypeLabel(node.type), SCENE_HINT_STYLE).setOrigin(0.5));
         container.setSize(48, 48);
         container.setInteractive(
           new Phaser.Geom.Rectangle(0, 0, 48, 48),
@@ -210,6 +231,7 @@ export class TournamentMapScene extends Phaser.Scene {
         container.on('pointerdown', () => {
           this.selectedNodeId = node.id;
           this.abandonArmed = false;
+          this.refreshAbandonButton();
           this.refreshSelectionPanel();
         });
       }
@@ -231,13 +253,14 @@ export class TournamentMapScene extends Phaser.Scene {
   }
 
   private createActionButtons(): void {
-    this.add
+    this.abandonButton = this.add
       .text(72, GAME_HEIGHT - 26, ABANDON_BUTTON.label, SCENE_BUTTON_STYLE)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
         if (!this.abandonArmed) {
           this.abandonArmed = true;
+          this.refreshAbandonButton();
           this.feedbackText?.setText('再次点击“放弃 Run”将结束本次进度并返回主菜单。');
           return;
         }
@@ -266,6 +289,18 @@ export class TournamentMapScene extends Phaser.Scene {
     this.confirmButton?.setAlpha(isAvailable ? 1 : 0.45);
   }
 
+  private refreshAbandonButton(): void {
+    if (!this.abandonButton) {
+      return;
+    }
+
+    this.abandonButton.setText(this.abandonArmed ? '确认放弃？' : ABANDON_BUTTON.label);
+    this.abandonButton.setStyle({
+      ...SCENE_BUTTON_STYLE,
+      backgroundColor: this.abandonArmed ? '#b91c1c' : SCENE_BUTTON_STYLE.backgroundColor,
+    });
+  }
+
   private confirmSelection(): void {
     const availableNodes = getAvailableNodes(this.currentRun);
     const selectedNode = availableNodes.find((node) => node.id === this.selectedNodeId);
@@ -291,7 +326,7 @@ export class TournamentMapScene extends Phaser.Scene {
       airplaneId: this.preferredAirplaneId,
       message:
         selectedNode.type === 'shop'
-          ? '已进入商店节点，占位推进后续路径；购买逻辑将在后续 Step 中补齐。'
+          ? '已记录本层商店补给信息，可以继续前往下一层。'
           : selectedNode.type === 'event'
             ? `事件记录：${selectedNode.eventData?.description ?? '神秘事件'}`
             : '已在休整节点短暂停留，准备继续前进。',

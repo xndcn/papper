@@ -81,7 +81,7 @@ describe('OpponentAI', () => {
       title: '冲刺新人',
     });
     const bossOpponent = createOpponent('aggressive', 7, {
-      id: 'boss-opponent',
+      id: 'gale_lin',
       title: '班级赛馆主',
     });
 

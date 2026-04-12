@@ -224,6 +224,10 @@ function generateRaceSummary({
   return `${airplaneName} 原型验证完成：${weather.displayName}会持续施加风力，飞机越界后会结束本轮并结算得分。`;
 }
 
+/**
+ * Converts the live race outcome into the compact TournamentSystem result shape
+ * used for run progression, rewards, and return-to-map flow after ResultScene.
+ */
 function createTournamentRaceResult({
   nodeId,
   playerRank,

@@ -97,6 +97,17 @@ function formatPartModifiers(part: Part): string {
   return modifiers.join(' · ');
 }
 
+function formatRaceConfigSubtitle(raceConfig: RaceConfig | undefined): string {
+  if (!raceConfig) {
+    return 'Phase 1 · Step 4：选择机型、装配零件，并根据天气调整本场配置';
+  }
+
+  const nodeTypeLabel =
+    raceConfig.nodeType === 'boss' ? '馆主决战' : raceConfig.nodeType === 'elite' ? '精英挑战' : '普通比赛';
+
+  return `锦标赛节点：${nodeTypeLabel} · 对手 ${raceConfig.opponent.name}`;
+}
+
 export class BuildScene extends Phaser.Scene {
   private readonly airplanes = getAirplanes();
   private readonly inventory = getParts();
@@ -131,9 +142,7 @@ export class BuildScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         38,
-        this.raceConfig
-          ? `锦标赛节点：${this.raceConfig.nodeType === 'boss' ? '馆主决战' : this.raceConfig.nodeType === 'elite' ? '精英挑战' : '普通比赛'} · 对手 ${this.raceConfig.opponent.name}`
-          : 'Phase 1 · Step 4：选择机型、装配零件，并根据天气调整本场配置',
+        formatRaceConfigSubtitle(this.raceConfig),
         SCENE_SUBTITLE_STYLE,
       )
       .setOrigin(0.5);

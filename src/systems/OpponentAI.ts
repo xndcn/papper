@@ -4,6 +4,7 @@ import { calculateFlightScore, type FlightScoreResult } from '@/systems/RaceSyst
 import { calculateWindEffect } from '@/systems/WeatherSystem';
 import type { AirplaneStats, Opponent, Weather } from '@/types';
 import { clamp, lerp, vectorMagnitude } from '@/utils/math';
+import { isBossOpponent } from '@/utils/opponentUtils';
 
 export interface AILaunchParams {
   readonly angleDegrees: number;
@@ -43,6 +44,8 @@ const MIN_AIRTIME_SECONDS = 0.7;
 const BOSS_LAUNCH_ANGLE_TARGET = 30;
 const BOSS_LAUNCH_POWER_TARGET = 0.98;
 const BOSS_WEATHER_VARIANCE_SCALE = 0.45;
+const BOSS_LAUNCH_ANGLE_BLEND_FACTOR = 0.55;
+const BOSS_LAUNCH_POWER_BLEND_FACTOR = 0.45;
 const BOSS_SKILL_BONUS = {
   speed: 1,
   glide: 1,
@@ -63,25 +66,15 @@ export function calculateAILaunchParams(opponent: Opponent, weather: Weather): A
   const difficultyFactor = resolveDifficultyFactor(opponent.difficulty);
   const isBoss = isBossOpponent(opponent);
   const weatherScale = isBoss ? BOSS_WEATHER_VARIANCE_SCALE : 1;
+  const baseAngleDegrees = personalityProfile.angleDegrees + weatherAdjustment.angleDegrees * weatherScale + difficultyFactor * 4;
+  const basePower = personalityProfile.power + weatherAdjustment.power * weatherScale + difficultyFactor * 0.04;
   const angleDegrees = clamp(
-    (isBoss
-      ? lerp(
-          personalityProfile.angleDegrees + weatherAdjustment.angleDegrees * weatherScale + difficultyFactor * 4,
-          BOSS_LAUNCH_ANGLE_TARGET,
-          0.55,
-        )
-      : personalityProfile.angleDegrees + weatherAdjustment.angleDegrees * weatherScale + difficultyFactor * 4),
+    isBoss ? lerp(baseAngleDegrees, BOSS_LAUNCH_ANGLE_TARGET, BOSS_LAUNCH_ANGLE_BLEND_FACTOR) : baseAngleDegrees,
     MIN_AI_ANGLE_DEGREES,
     MAX_AI_ANGLE_DEGREES,
   );
   const power = clamp(
-    (isBoss
-      ? lerp(
-          personalityProfile.power + weatherAdjustment.power * weatherScale + difficultyFactor * 0.04,
-          BOSS_LAUNCH_POWER_TARGET,
-          0.45,
-        )
-      : personalityProfile.power + weatherAdjustment.power * weatherScale + difficultyFactor * 0.04),
+    isBoss ? lerp(basePower, BOSS_LAUNCH_POWER_TARGET, BOSS_LAUNCH_POWER_BLEND_FACTOR) : basePower,
     MIN_AI_POWER,
     MAX_AI_POWER,
   );
@@ -146,8 +139,4 @@ function applyOpponentFlightBonuses(airplaneStats: AirplaneStats, opponent: Oppo
     glide: clamp(airplaneStats.glide + BOSS_SKILL_BONUS.glide, 1, 10),
     stability: clamp(airplaneStats.stability + BOSS_SKILL_BONUS.stability, 1, 10),
   };
-}
-
-function isBossOpponent(opponent: Opponent): boolean {
-  return opponent.title.includes('馆主');
 }

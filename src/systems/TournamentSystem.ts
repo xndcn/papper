@@ -14,6 +14,7 @@ import type {
   TournamentNodeType,
   TournamentRun,
 } from '@/types';
+import { isBossOpponent } from '@/utils/opponentUtils';
 import { createRNG, randomInt, shuffle, weightedChoice } from '@/utils/SeedManager';
 
 const DEFAULT_LAYER_COUNT = 5;
@@ -363,12 +364,7 @@ function scoreOpponent(
   type: Extract<TournamentNodeType, 'race' | 'elite' | 'boss'>,
 ): number {
   const difficultyDelta = Math.abs(opponent.difficulty - difficulty);
-  const typePenalty =
-    type === 'boss'
-      ? (isBossOpponent(opponent) ? 0 : NON_BOSS_SELECTION_PENALTY) + difficultyDelta
-      : type === 'elite'
-        ? Math.max(0, 6 - opponent.difficulty) + (isBossOpponent(opponent) ? 2 : 0)
-        : Math.max(0, opponent.difficulty - difficulty) + (isBossOpponent(opponent) ? 3 : 0);
+  const typePenalty = resolveOpponentTypePenalty(opponent, difficulty, type, difficultyDelta);
 
   return difficultyDelta + typePenalty;
 }
@@ -500,6 +496,20 @@ function isRaceNodeType(
   return type === 'race' || type === 'elite' || type === 'boss';
 }
 
-function isBossOpponent(opponent: Opponent): boolean {
-  return opponent.title.includes('馆主');
+function resolveOpponentTypePenalty(
+  opponent: Opponent,
+  difficulty: number,
+  type: Extract<TournamentNodeType, 'race' | 'elite' | 'boss'>,
+  difficultyDelta: number,
+): number {
+  if (type === 'boss') {
+    const bossPenalty = isBossOpponent(opponent) ? 0 : NON_BOSS_SELECTION_PENALTY;
+    return bossPenalty + difficultyDelta;
+  }
+
+  if (type === 'elite') {
+    return Math.max(0, 6 - opponent.difficulty) + (isBossOpponent(opponent) ? 2 : 0);
+  }
+
+  return Math.max(0, opponent.difficulty - difficulty) + (isBossOpponent(opponent) ? 3 : 0);
 }

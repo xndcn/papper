@@ -31,6 +31,18 @@ const DEFAULT_RESULT_DATA: ResultSceneData = {
   summary: '尚未生成比赛结果。',
 };
 
+function getResultHintText(data: ResultSceneData): string {
+  if (data.nextTournamentRun) {
+    return data.nextTournamentRun.status === 'in_progress'
+      ? '点击“返回地图”继续当前进度，或返回主菜单结束本次 Run。'
+      : '本次 Run 已结算完成，点击按钮返回主菜单。';
+  }
+
+  return data.replayData
+    ? '点击按钮继续；移动端可直接轻触，桌面端也可用 Enter / Esc'
+    : '当前结果不可重赛，请点击“返回菜单”继续；桌面端也可按 Esc';
+}
+
 export class ResultScene extends Phaser.Scene {
   constructor() {
     super(SCENE_KEYS.RESULT);
@@ -128,13 +140,7 @@ export class ResultScene extends Phaser.Scene {
       .text(
         GAME_CENTER_X,
         GAME_CENTER_Y + 128,
-        hasTournamentFollowUp
-          ? data.nextTournamentRun.status === 'in_progress'
-            ? '点击“返回地图”继续本次 Run，或返回主菜单结束当前会话。'
-            : '本次 Run 已结算完成，点击按钮返回主菜单。'
-          : data.replayData
-            ? '点击按钮继续；移动端可直接轻触，桌面端也可用 Enter / Esc'
-            : '当前结果不可重赛，请点击“返回菜单”继续；桌面端也可按 Esc',
+        getResultHintText(data),
         SCENE_HINT_STYLE,
       )
       .setOrigin(0.5);
