@@ -22,6 +22,8 @@ const MAX_NODES_PER_LAYER = 3;
 const LAYER_VERTICAL_PADDING = 40;
 const VICTORY_BONUS_COINS = 60;
 const DEFEAT_BONUS_COINS = 20;
+const BASE_OPPONENT_WEIGHT = 6;
+const FNV_PRIME_32 = 16777619;
 
 export function generateTournamentMap(seed: number, layerCount = DEFAULT_LAYER_COUNT): TournamentMap {
   if (!Number.isInteger(layerCount) || layerCount < 1) {
@@ -314,7 +316,9 @@ function selectOpponent(
   });
   const candidateCount = Math.min(3, sortedCandidates.length);
   const candidates = sortedCandidates.slice(0, candidateCount);
-  const weights = candidates.map((opponent, index) => Math.max(1, 6 - scoreOpponent(opponent, difficulty, type) - index));
+  const weights = candidates.map((opponent, index) =>
+    Math.max(1, BASE_OPPONENT_WEIGHT - scoreOpponent(opponent, difficulty, type) - index),
+  );
 
   return weightedChoice(rng, candidates, weights);
 }
@@ -439,7 +443,7 @@ function deriveNodeSeed(seed: number, nodeId: string): number {
   let hash = seed >>> 0;
 
   for (const character of nodeId) {
-    hash = Math.imul(hash ^ character.charCodeAt(0), 16777619) >>> 0;
+    hash = Math.imul(hash ^ character.charCodeAt(0), FNV_PRIME_32) >>> 0;
   }
 
   return hash;

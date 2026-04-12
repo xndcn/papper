@@ -1,5 +1,6 @@
 function normalizeSeed(seed: number): number {
-  return (Math.trunc(seed) >>> 0) || 1;
+  const normalizedSeed = Number.isFinite(seed) ? Math.trunc(seed) >>> 0 : 0;
+  return normalizedSeed === 0 ? 1 : normalizedSeed;
 }
 
 export function createRNG(seed: number): () => number {
