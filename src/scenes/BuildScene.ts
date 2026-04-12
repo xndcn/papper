@@ -37,6 +37,8 @@ import type {
   TournamentRun,
   Weather,
 } from '@/types';
+import { persistGameState } from '@/utils/gamePersistence';
+import { GameState } from '@/utils/GameState';
 
 const START_RACE_BUTTON: SceneNavigationButton = {
   label: '出战',
@@ -175,7 +177,7 @@ export class BuildScene extends Phaser.Scene {
   create(data?: BuildSceneData): void {
     this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
     this.selectedAirplaneIndex = this.resolveInitialAirplaneIndex(data?.airplaneId);
-    this.tournamentRun = data?.tournamentRun;
+    this.tournamentRun = data?.tournamentRun ?? GameState.getInstance().getCurrentRun() ?? undefined;
     this.raceConfig = data?.raceConfig;
     this.weather = this.raceConfig?.weather ?? selectWeather(getWeatherPresets(), Date.now());
     this.equippedParts = {};
@@ -214,7 +216,7 @@ export class BuildScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     startButton.on('pointerdown', () => {
-      this.launchRace();
+      void this.launchRace();
     });
     returnButton.on('pointerdown', () => {
       if (this.tournamentRun) {
@@ -240,7 +242,7 @@ export class BuildScene extends Phaser.Scene {
       this.scene.start(RETURN_TO_MENU_BUTTON.target);
     };
     const handleEnter = () => {
-      this.launchRace();
+      void this.launchRace();
     };
 
     this.input.keyboard?.on('keydown-ESC', handleEscape);
@@ -455,14 +457,31 @@ export class BuildScene extends Phaser.Scene {
     });
   }
 
-  private launchRace(): void {
+  private async launchRace(): Promise<void> {
     const airplane = this.getSelectedAirplane();
+    const equippedParts = getEquippedPartsList(this.equippedParts, airplane.slots);
+
+    if (GameState.getInstance().getSaveData()) {
+      GameState.getInstance().updateSaveData((saveData) => ({
+        ...saveData,
+        equippedLoadout: {
+          airplaneId: airplane.id,
+          parts: createLoadoutPartsRecord(equippedParts),
+          skills: this.equippedSkills.map((skill) => skill.id),
+        },
+        activeTournamentRun: this.tournamentRun ?? saveData.activeTournamentRun,
+        lastSavedAt: Date.now(),
+      }));
+      await persistGameState({
+        auto: true,
+      });
+    }
 
     this.scene.start(START_RACE_BUTTON.target, {
       airplaneId: airplane.id,
       airplaneName: airplane.name,
       airplaneStats: calculateBuildPreview(airplane, this.equippedParts),
-      equippedParts: getEquippedPartsList(this.equippedParts, airplane.slots),
+      equippedParts,
       equippedSkills: this.equippedSkills,
       weather: this.raceConfig?.weather ?? this.weather,
       opponentId: this.raceConfig?.opponent.id,
@@ -470,4 +489,14 @@ export class BuildScene extends Phaser.Scene {
       tournamentNodeId: this.raceConfig?.nodeId,
     });
   }
+}
+
+function createLoadoutPartsRecord(parts: readonly Part[]): Readonly<Record<PartSlot, string | null>> {
+  return {
+    nose: parts.find((part) => part.slot === 'nose')?.id ?? null,
+    wing: parts.find((part) => part.slot === 'wing')?.id ?? null,
+    tail: parts.find((part) => part.slot === 'tail')?.id ?? null,
+    coating: parts.find((part) => part.slot === 'coating')?.id ?? null,
+    weight: parts.find((part) => part.slot === 'weight')?.id ?? null,
+  };
 }

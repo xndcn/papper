@@ -19,6 +19,8 @@ import {
   startRace,
 } from '@/systems/TournamentSystem';
 import type { SceneNavigationButton, TournamentMapSceneData, TournamentNode, TournamentNodeType, TournamentRun } from '@/types';
+import { persistGameState } from '@/utils/gamePersistence';
+import { GameState } from '@/utils/GameState';
 
 const NODE_COLORS: Record<TournamentNodeType, number> = {
   race: 0x38bdf8,
@@ -117,7 +119,7 @@ export class TournamentMapScene extends Phaser.Scene {
   }
 
   create(data?: TournamentMapSceneData): void {
-    this.currentRun = data?.run ?? createTournamentRun(Date.now());
+    this.currentRun = data?.run ?? GameState.getInstance().getCurrentRun() ?? createTournamentRun(Date.now());
     this.preferredAirplaneId = data?.airplaneId;
     this.feedbackMessage = data?.message ?? '';
     this.selectedNodeId = getAvailableNodes(this.currentRun)[0]?.id;
@@ -248,7 +250,7 @@ export class TournamentMapScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true })
       .on('pointerdown', () => {
-        this.confirmSelection();
+        void this.confirmSelection();
       });
   }
 
@@ -265,8 +267,7 @@ export class TournamentMapScene extends Phaser.Scene {
           return;
         }
 
-        abandonRun(this.currentRun);
-        this.scene.start(ABANDON_BUTTON.target);
+        void this.abandonCurrentRun();
       });
   }
 
@@ -301,7 +302,31 @@ export class TournamentMapScene extends Phaser.Scene {
     });
   }
 
-  private confirmSelection(): void {
+  private async abandonCurrentRun(): Promise<void> {
+    const currentSaveData = GameState.getInstance().getSaveData();
+
+    if (currentSaveData) {
+      const abandonedTournamentRun = abandonRun(this.currentRun);
+      GameState.getInstance().updateSaveData((saveData) => {
+        const saveWithoutRun = { ...saveData };
+        Reflect.deleteProperty(saveWithoutRun, 'activeTournamentRun');
+
+        return {
+          ...saveWithoutRun,
+          lastSavedAt: Date.now(),
+        };
+      });
+      await persistGameState();
+      this.scene.start(ABANDON_BUTTON.target, {
+        message: `已放弃本次 Run（状态：${abandonedTournamentRun.status}），现在可以开始新的锦标赛。`,
+      });
+      return;
+    }
+
+    this.scene.start(ABANDON_BUTTON.target);
+  }
+
+  private async confirmSelection(): Promise<void> {
     const availableNodes = getAvailableNodes(this.currentRun);
     const selectedNode = availableNodes.find((node) => node.id === this.selectedNodeId);
 
@@ -311,6 +336,21 @@ export class TournamentMapScene extends Phaser.Scene {
     }
 
     const nextRun = selectNode(this.currentRun, selectedNode.id);
+
+    if (GameState.getInstance().getSaveData()) {
+      GameState.getInstance().updateSaveData((saveData) => ({
+        ...saveData,
+        equippedLoadout: {
+          ...saveData.equippedLoadout,
+          airplaneId: this.preferredAirplaneId ?? saveData.equippedLoadout.airplaneId,
+        },
+        activeTournamentRun: nextRun,
+        lastSavedAt: Date.now(),
+      }));
+      await persistGameState({
+        auto: true,
+      });
+    }
 
     if (selectedNode.type === 'race' || selectedNode.type === 'elite' || selectedNode.type === 'boss') {
       this.scene.start(SCENE_KEYS.BUILD, {
