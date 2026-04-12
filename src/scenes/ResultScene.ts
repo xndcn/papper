@@ -12,7 +12,10 @@ import {
 } from '@/config/constants';
 import { calculateFlightScore } from '@/systems/RaceSystem';
 import { claimRaceRewards } from '@/systems/TournamentSystem';
-import type { RaceSceneData, ResultSceneData, Reward, SceneNavigationButton } from '@/types';
+import type { MainMenuSceneData, RaceSceneData, ResultSceneData, Reward, SceneNavigationButton } from '@/types';
+import { persistGameState } from '@/utils/gamePersistence';
+import { GameState } from '@/utils/GameState';
+import { applyAirplaneUnlockRewards, describeCompletedRunSettlement, settleCompletedRun } from '@/utils/runPersistence';
 
 const REPLAY_BUTTON: SceneNavigationButton = {
   label: '再来一局',
@@ -69,6 +72,10 @@ function formatRewardTypeLabel(reward: Reward): string {
 }
 
 function getResultHintText(data: ResultSceneData): string {
+  if (data.runCompletionSummary && data.runCompletionSummary.length > 0) {
+    return data.runCompletionSummary.join(' · ');
+  }
+
   if (data.nextTournamentRun) {
     return data.nextTournamentRun.status === 'in_progress'
       ? '点击“返回地图”继续当前进度，或返回主菜单结束本次 Run。'
@@ -223,6 +230,12 @@ export class ResultScene extends Phaser.Scene {
               }),
           )
         : [];
+    const hasPendingRunSettlement =
+      hasTournamentFollowUp && resolvedTournamentRun?.status !== 'in_progress' && !data.runSettlementApplied;
+
+    const startMainMenu = (menuData?: MainMenuSceneData) => {
+      this.scene.start(RETURN_TO_MENU_BUTTON.target, menuData);
+    };
 
     if (hasRewardOptions) {
       this.add.text(GAME_CENTER_X, GAME_CENTER_Y + 92, '胜利奖励三选一', SCENE_SUBTITLE_STYLE).setOrigin(0.5);
@@ -239,57 +252,139 @@ export class ResultScene extends Phaser.Scene {
     }
 
     replayButton.on('pointerdown', () => {
-      if (hasTournamentFollowUp) {
-        if (hasRewardOptions && !selectedReward) {
-          hintText.setText('请先在下方奖励面板中选择一项奖励。');
-          return;
-        }
-
-        if (resolvedTournamentRun?.status === 'in_progress') {
-          this.scene.start(SCENE_KEYS.TOURNAMENT_MAP, {
-            run: resolvedTournamentRun,
-            airplaneId: data.airplaneId,
-          });
-          return;
-        }
-
-        this.scene.start(RETURN_TO_MENU_BUTTON.target);
+      void this.handlePrimaryAction({
+        data,
+        hasTournamentFollowUp,
+        hasRewardOptions,
+        selectedReward,
+        resolvedTournamentRun,
+        hintText,
+        startMainMenu,
+      });
+    });
+    returnButton.on('pointerdown', () => {
+      if (hasPendingRunSettlement) {
+        void this.handlePrimaryAction({
+          data,
+          hasTournamentFollowUp,
+          hasRewardOptions,
+          selectedReward,
+          resolvedTournamentRun,
+          hintText,
+          startMainMenu,
+        });
         return;
       }
 
-      if (!this.tryReplay(data.replayData)) {
-        hintText.setText(REPLAY_UNAVAILABLE_HINT);
-      }
-    });
-    returnButton.on('pointerdown', () => {
-      this.scene.start(RETURN_TO_MENU_BUTTON.target);
+      startMainMenu();
     });
 
     this.input.keyboard?.once('keydown-ENTER', () => {
-      if (hasTournamentFollowUp) {
-        if (hasRewardOptions && !selectedReward) {
-          hintText.setText('请先在下方奖励面板中选择一项奖励。');
-          return;
-        }
-
-        if (resolvedTournamentRun?.status === 'in_progress') {
-          this.scene.start(SCENE_KEYS.TOURNAMENT_MAP, {
-            run: resolvedTournamentRun,
-            airplaneId: data.airplaneId,
-          });
-          return;
-        }
-
-        this.scene.start(RETURN_TO_MENU_BUTTON.target);
+      void this.handlePrimaryAction({
+        data,
+        hasTournamentFollowUp,
+        hasRewardOptions,
+        selectedReward,
+        resolvedTournamentRun,
+        hintText,
+        startMainMenu,
+      });
+    });
+    this.input.keyboard?.once('keydown-ESC', () => {
+      if (hasPendingRunSettlement) {
+        void this.handlePrimaryAction({
+          data,
+          hasTournamentFollowUp,
+          hasRewardOptions,
+          selectedReward,
+          resolvedTournamentRun,
+          hintText,
+          startMainMenu,
+        });
         return;
       }
 
-      if (!this.tryReplay(data.replayData)) {
-        hintText.setText(REPLAY_UNAVAILABLE_HINT);
+      startMainMenu();
+    });
+  }
+
+  private async handlePrimaryAction({
+    data,
+    hasTournamentFollowUp,
+    hasRewardOptions,
+    selectedReward,
+    resolvedTournamentRun,
+    hintText,
+    startMainMenu,
+  }: {
+    readonly data: ResultSceneData;
+    readonly hasTournamentFollowUp: boolean;
+    readonly hasRewardOptions: boolean;
+    readonly selectedReward: Reward | undefined;
+    readonly resolvedTournamentRun: ResultSceneData['nextTournamentRun'];
+    readonly hintText: Phaser.GameObjects.Text;
+    readonly startMainMenu: (menuData?: MainMenuSceneData) => void;
+  }): Promise<void> {
+    if (hasTournamentFollowUp) {
+      if (hasRewardOptions && !selectedReward) {
+        hintText.setText('请先在下方奖励面板中选择一项奖励。');
+        return;
       }
-    });
-    this.input.keyboard?.once('keydown-ESC', () => {
-      this.scene.start(RETURN_TO_MENU_BUTTON.target);
-    });
+
+      const claimedRewards = selectedReward
+        ? [selectedReward, ...(data.specialRewards ?? [])]
+        : [...(data.specialRewards ?? [])];
+
+      if (resolvedTournamentRun?.status === 'in_progress') {
+        if (GameState.getInstance().getSaveData()) {
+          GameState.getInstance().updateSaveData((saveData) =>
+            applyAirplaneUnlockRewards(
+              {
+                ...saveData,
+                activeTournamentRun: resolvedTournamentRun,
+                lastSavedAt: Date.now(),
+              },
+              claimedRewards,
+              Date.now(),
+            ),
+          );
+          await persistGameState({
+            auto: true,
+          });
+        }
+
+        this.scene.start(SCENE_KEYS.TOURNAMENT_MAP, {
+          run: resolvedTournamentRun,
+          airplaneId: data.airplaneId,
+        });
+        return;
+      }
+
+      if (resolvedTournamentRun && !data.runSettlementApplied) {
+        const currentSaveData = GameState.getInstance().getSaveData();
+
+        if (!currentSaveData) {
+          startMainMenu();
+          return;
+        }
+
+        const unlockedRewardSaveData = applyAirplaneUnlockRewards(currentSaveData, claimedRewards, Date.now());
+        const settlement = settleCompletedRun(unlockedRewardSaveData, resolvedTournamentRun);
+
+        GameState.getInstance().updateSaveData(() => settlement.saveData);
+        await persistGameState();
+        startMainMenu({
+          message: describeCompletedRunSettlement(settlement).join(' · '),
+        });
+        return;
+      }
+
+      startMainMenu();
+      return;
+    }
+
+    if (!this.tryReplay(data.replayData)) {
+      hintText.setText(REPLAY_UNAVAILABLE_HINT);
+    }
   }
 }
