@@ -55,6 +55,24 @@
       "backstory": "小乔总爱在看台边缘练习急转和拉升，拿一架蝴蝶翼就能玩出各种轨迹。"
     },
     {
+      "id": "gale_lin",
+      "name": "林小冲",
+      "title": "班级赛馆主",
+      "personality": "aggressive",
+      "airplaneId": "classic_dart",
+      "partIds": ["streamlined_nose_cone", "paper_tail_fin", "speed_varnish"],
+      "dialogues": {
+        "greeting": "废话少说，比谁的飞机飞得快就完了！",
+        "onWin": "看见没？先冲出去的人，才有资格站在终点前笑。",
+        "onLose": "哼，下次我一定会更快的！你等着！",
+        "taunt": "别想着靠慢悠悠的滑翔追上我，我开局就会把你甩开！",
+        "respect": "原来速度之外还有这么多门道……这局我认了，下次再来！"
+      },
+      "difficulty": 7,
+      "spriteKey": "opponent_gale_lin",
+      "backstory": "校内班级赛的守关者，最擅长用速度型纸翼在起飞后的几秒内直接拉开差距。"
+    },
+    {
       "id": "ace_yun",
       "name": "云澈",
       "title": "纸翼馆主",

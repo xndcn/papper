@@ -47,6 +47,12 @@ export class ResultScene extends Phaser.Scene {
 
   create(data: ResultSceneData = DEFAULT_RESULT_DATA): void {
     this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
+    const hasTournamentFollowUp = data.nextTournamentRun !== undefined;
+    const primaryButtonLabel = hasTournamentFollowUp
+      ? data.nextTournamentRun.status === 'in_progress'
+        ? '返回地图'
+        : '完成 Run'
+      : REPLAY_BUTTON.label;
     const rankings = data.rankings ?? [
       {
         name: data.playerName ?? '你',
@@ -105,7 +111,7 @@ export class ResultScene extends Phaser.Scene {
     }
 
     const replayButton = this.add
-      .text(GAME_CENTER_X - 72, GAME_CENTER_Y + 98, REPLAY_BUTTON.label, SCENE_BUTTON_STYLE)
+      .text(GAME_CENTER_X - 72, GAME_CENTER_Y + 98, primaryButtonLabel, SCENE_BUTTON_STYLE)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     const returnButton = this.add
@@ -113,7 +119,7 @@ export class ResultScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
-    if (!data.replayData) {
+    if (!data.replayData && !hasTournamentFollowUp) {
       replayButton.disableInteractive();
       replayButton.setAlpha(0.45);
     }
@@ -122,14 +128,31 @@ export class ResultScene extends Phaser.Scene {
       .text(
         GAME_CENTER_X,
         GAME_CENTER_Y + 128,
-        data.replayData
-          ? '点击按钮继续；移动端可直接轻触，桌面端也可用 Enter / Esc'
-          : '当前结果不可重赛，请点击“返回菜单”继续；桌面端也可按 Esc',
+        hasTournamentFollowUp
+          ? data.nextTournamentRun.status === 'in_progress'
+            ? '点击“返回地图”继续本次 Run，或返回主菜单结束当前会话。'
+            : '本次 Run 已结算完成，点击按钮返回主菜单。'
+          : data.replayData
+            ? '点击按钮继续；移动端可直接轻触，桌面端也可用 Enter / Esc'
+            : '当前结果不可重赛，请点击“返回菜单”继续；桌面端也可按 Esc',
         SCENE_HINT_STYLE,
       )
       .setOrigin(0.5);
 
     replayButton.on('pointerdown', () => {
+      if (hasTournamentFollowUp) {
+        if (data.nextTournamentRun.status === 'in_progress') {
+          this.scene.start(SCENE_KEYS.TOURNAMENT_MAP, {
+            run: data.nextTournamentRun,
+            airplaneId: data.airplaneId,
+          });
+          return;
+        }
+
+        this.scene.start(RETURN_TO_MENU_BUTTON.target);
+        return;
+      }
+
       if (!this.tryReplay(data.replayData)) {
         hintText.setText(REPLAY_UNAVAILABLE_HINT);
       }
@@ -139,6 +162,19 @@ export class ResultScene extends Phaser.Scene {
     });
 
     this.input.keyboard?.once('keydown-ENTER', () => {
+      if (hasTournamentFollowUp) {
+        if (data.nextTournamentRun.status === 'in_progress') {
+          this.scene.start(SCENE_KEYS.TOURNAMENT_MAP, {
+            run: data.nextTournamentRun,
+            airplaneId: data.airplaneId,
+          });
+          return;
+        }
+
+        this.scene.start(RETURN_TO_MENU_BUTTON.target);
+        return;
+      }
+
       if (!this.tryReplay(data.replayData)) {
         hintText.setText(REPLAY_UNAVAILABLE_HINT);
       }

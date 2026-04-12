@@ -11,11 +11,11 @@ import {
   SCENE_TITLE_STYLE,
 } from '@/config/constants';
 import { getAirplanes } from '@/systems/ContentLoader';
-import type { Airplane, BuildSceneData, SceneNavigationButton } from '@/types';
+import type { Airplane, SceneNavigationButton, TournamentMapSceneData } from '@/types';
 
 const OPEN_BUILD_BUTTON: SceneNavigationButton = {
-  label: '开始比赛',
-  target: SCENE_KEYS.BUILD,
+  label: '开始锦标赛',
+  target: SCENE_KEYS.TOURNAMENT_MAP,
 };
 
 function formatStatsLabel(airplane: Airplane): string {
@@ -42,7 +42,7 @@ export class MainMenuScene extends Phaser.Scene {
       .text(GAME_CENTER_X, GAME_CENTER_Y - 52, 'Paper Wings Legend · 调整纸翼，迎风启航', SCENE_SUBTITLE_STYLE)
       .setOrigin(0.5);
     this.add
-      .text(GAME_CENTER_X, GAME_CENTER_Y - 30, '选择基础机型后进入构建界面，完成本轮 1v1 比赛循环', SCENE_SUBTITLE_STYLE)
+      .text(GAME_CENTER_X, GAME_CENTER_Y - 30, '选择基础机型后进入锦标赛地图，逐层挑战对手并推进本次 Run', SCENE_SUBTITLE_STYLE)
       .setOrigin(0.5);
 
     this.selectedAirplaneNameText = this.add.text(GAME_CENTER_X, GAME_CENTER_Y + 4, '', SCENE_TITLE_STYLE).setOrigin(0.5);
@@ -65,7 +65,7 @@ export class MainMenuScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     startButton.on('pointerdown', () => {
-      this.scene.start(OPEN_BUILD_BUTTON.target, this.createBuildSceneData());
+      this.scene.start(OPEN_BUILD_BUTTON.target, this.createTournamentMapSceneData());
     });
     previousButton.on('pointerdown', () => this.cycleAirplane(-1));
     nextButton.on('pointerdown', () => this.cycleAirplane(1));
@@ -77,7 +77,7 @@ export class MainMenuScene extends Phaser.Scene {
       this.cycleAirplane(1);
     };
     const handleStart = () => {
-      this.scene.start(OPEN_BUILD_BUTTON.target, this.createBuildSceneData());
+      this.scene.start(OPEN_BUILD_BUTTON.target, this.createTournamentMapSceneData());
     };
 
     this.input.keyboard?.on('keydown-LEFT', handlePrevious);
@@ -95,7 +95,7 @@ export class MainMenuScene extends Phaser.Scene {
       .text(
         GAME_CENTER_X,
         GAME_CENTER_Y + 112,
-        '移动端可直接点击箭头与“开始比赛”；桌面端也可用 ← / → / Enter 快速操作',
+        '移动端可直接点击箭头与“开始锦标赛”；桌面端也可用 ← / → / Enter 快速操作',
         SCENE_HINT_STYLE,
       )
       .setOrigin(0.5);
@@ -131,7 +131,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
   }
 
-  private createBuildSceneData(): BuildSceneData {
+  private createTournamentMapSceneData(): TournamentMapSceneData {
     const airplane = this.airplanes[this.selectedAirplaneIndex];
 
     return {

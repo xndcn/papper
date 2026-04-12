@@ -20,7 +20,7 @@ import {
 } from '@/systems/BuildSystem';
 import { getAirplanes, getParts, getWeatherPresets } from '@/systems/ContentLoader';
 import { selectWeather } from '@/systems/WeatherSystem';
-import type { Airplane, AirplaneStats, BuildSceneData, Part, PartSlot, SceneNavigationButton, Weather } from '@/types';
+import type { Airplane, AirplaneStats, BuildSceneData, Part, PartSlot, RaceConfig, SceneNavigationButton, TournamentRun, Weather } from '@/types';
 
 const START_RACE_BUTTON: SceneNavigationButton = {
   label: '出战',
@@ -111,6 +111,8 @@ export class BuildScene extends Phaser.Scene {
   private previewTitleText?: Phaser.GameObjects.Text;
   private previewStatTexts: Phaser.GameObjects.Text[] = [];
   private statsGraphics?: Phaser.GameObjects.Graphics;
+  private tournamentRun?: TournamentRun;
+  private raceConfig?: RaceConfig;
 
   constructor() {
     super(SCENE_KEYS.BUILD);
@@ -119,7 +121,9 @@ export class BuildScene extends Phaser.Scene {
   create(data?: BuildSceneData): void {
     this.cameras.main.setBackgroundColor(GAME_BACKGROUND_COLOR);
     this.selectedAirplaneIndex = this.resolveInitialAirplaneIndex(data?.airplaneId);
-    this.weather = selectWeather(getWeatherPresets(), Date.now());
+    this.tournamentRun = data?.tournamentRun;
+    this.raceConfig = data?.raceConfig;
+    this.weather = this.raceConfig?.weather ?? selectWeather(getWeatherPresets(), Date.now());
     this.equippedParts = {};
 
     this.add.text(GAME_WIDTH / 2, 18, '赛前构建', SCENE_TITLE_STYLE).setOrigin(0.5);
@@ -127,7 +131,9 @@ export class BuildScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         38,
-        'Phase 1 · Step 4：选择机型、装配零件，并根据天气调整本场配置',
+        this.raceConfig
+          ? `锦标赛节点：${this.raceConfig.nodeType === 'boss' ? '馆主决战' : this.raceConfig.nodeType === 'elite' ? '精英挑战' : '普通比赛'} · 对手 ${this.raceConfig.opponent.name}`
+          : 'Phase 1 · Step 4：选择机型、装配零件，并根据天气调整本场配置',
         SCENE_SUBTITLE_STYLE,
       )
       .setOrigin(0.5);
@@ -150,7 +156,7 @@ export class BuildScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
     const returnButton = this.add
-      .text(292, 236, RETURN_TO_MENU_BUTTON.label, SCENE_BUTTON_STYLE)
+      .text(292, 236, this.tournamentRun ? '返回地图' : RETURN_TO_MENU_BUTTON.label, SCENE_BUTTON_STYLE)
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
@@ -158,10 +164,26 @@ export class BuildScene extends Phaser.Scene {
       this.launchRace();
     });
     returnButton.on('pointerdown', () => {
+      if (this.tournamentRun) {
+        this.scene.start(SCENE_KEYS.TOURNAMENT_MAP, {
+          run: this.tournamentRun,
+          airplaneId: this.getSelectedAirplane().id,
+        });
+        return;
+      }
+
       this.scene.start(RETURN_TO_MENU_BUTTON.target);
     });
 
     const handleEscape = () => {
+      if (this.tournamentRun) {
+        this.scene.start(SCENE_KEYS.TOURNAMENT_MAP, {
+          run: this.tournamentRun,
+          airplaneId: this.getSelectedAirplane().id,
+        });
+        return;
+      }
+
       this.scene.start(RETURN_TO_MENU_BUTTON.target);
     };
     const handleEnter = () => {
@@ -332,7 +354,10 @@ export class BuildScene extends Phaser.Scene {
       airplaneName: airplane.name,
       airplaneStats: calculateBuildPreview(airplane, this.equippedParts),
       equippedParts: getEquippedPartsList(this.equippedParts, airplane.slots),
-      weather: this.weather,
+      weather: this.raceConfig?.weather ?? this.weather,
+      opponentId: this.raceConfig?.opponent.id,
+      tournamentRun: this.tournamentRun,
+      tournamentNodeId: this.raceConfig?.nodeId,
     });
   }
 }

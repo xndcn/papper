@@ -30,7 +30,7 @@ describe('ContentLoader', () => {
     expect(getAirplanes()).toHaveLength(3);
     expect(getParts()).toHaveLength(10);
     expect(getWeatherPresets()).toHaveLength(3);
-    expect(getOpponents()).toHaveLength(4);
+    expect(getOpponents()).toHaveLength(5);
     expect(getSkills()).toHaveLength(5);
     expect(getBuffs()).toHaveLength(6);
 
@@ -59,6 +59,10 @@ describe('ContentLoader', () => {
     expect(getOpponentById('storm_wei')).toMatchObject({
       personality: 'balanced',
       airplaneId: 'classic_glider',
+    });
+    expect(getOpponentById('gale_lin')).toMatchObject({
+      title: '班级赛馆主',
+      difficulty: 7,
     });
   });
 

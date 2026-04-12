@@ -3,7 +3,7 @@ import { calculateDragCoefficient, calculateStatBasedLaunchForce } from '@/syste
 import { calculateFlightScore, type FlightScoreResult } from '@/systems/RaceSystem';
 import { calculateWindEffect } from '@/systems/WeatherSystem';
 import type { AirplaneStats, Opponent, Weather } from '@/types';
-import { clamp, vectorMagnitude } from '@/utils/math';
+import { clamp, lerp, vectorMagnitude } from '@/utils/math';
 
 export interface AILaunchParams {
   readonly angleDegrees: number;
@@ -40,6 +40,14 @@ const SIMULATION_GRAVITY = GAME_GRAVITY.y * 120;
 const DISTANCE_SCALE = 6;
 const WIND_DISTANCE_SCALE = 30000;
 const MIN_AIRTIME_SECONDS = 0.7;
+const BOSS_LAUNCH_ANGLE_TARGET = 30;
+const BOSS_LAUNCH_POWER_TARGET = 0.98;
+const BOSS_WEATHER_VARIANCE_SCALE = 0.45;
+const BOSS_SKILL_BONUS = {
+  speed: 1,
+  glide: 1,
+  stability: 1,
+} as const;
 
 /**
  * Normalizes the content difficulty field (authored on a 1-10 scale) into a 0-1 factor
@@ -53,13 +61,27 @@ export function calculateAILaunchParams(opponent: Opponent, weather: Weather): A
   const personalityProfile = AI_PERSONALITY_PROFILES[opponent.personality];
   const weatherAdjustment = WEATHER_ADJUSTMENTS[weather.condition];
   const difficultyFactor = resolveDifficultyFactor(opponent.difficulty);
+  const isBoss = isBossOpponent(opponent);
+  const weatherScale = isBoss ? BOSS_WEATHER_VARIANCE_SCALE : 1;
   const angleDegrees = clamp(
-    personalityProfile.angleDegrees + weatherAdjustment.angleDegrees + difficultyFactor * 4,
+    (isBoss
+      ? lerp(
+          personalityProfile.angleDegrees + weatherAdjustment.angleDegrees * weatherScale + difficultyFactor * 4,
+          BOSS_LAUNCH_ANGLE_TARGET,
+          0.55,
+        )
+      : personalityProfile.angleDegrees + weatherAdjustment.angleDegrees * weatherScale + difficultyFactor * 4),
     MIN_AI_ANGLE_DEGREES,
     MAX_AI_ANGLE_DEGREES,
   );
   const power = clamp(
-    personalityProfile.power + weatherAdjustment.power + difficultyFactor * 0.04,
+    (isBoss
+      ? lerp(
+          personalityProfile.power + weatherAdjustment.power * weatherScale + difficultyFactor * 0.04,
+          BOSS_LAUNCH_POWER_TARGET,
+          0.45,
+        )
+      : personalityProfile.power + weatherAdjustment.power * weatherScale + difficultyFactor * 0.04),
     MIN_AI_POWER,
     MAX_AI_POWER,
   );
@@ -76,25 +98,28 @@ export function simulateOpponentFlight(
   airplaneStats: AirplaneStats,
   weather: Weather,
   raceDuration: number,
+  opponent?: Opponent,
 ): SimulatedOpponentFlightResult {
+  const effectiveStats = applyOpponentFlightBonuses(airplaneStats, opponent);
   const launchForceMagnitude = vectorMagnitude(
-    calculateStatBasedLaunchForce(airplaneStats.speed, launchParams.power, launchParams.angleRadians),
+    calculateStatBasedLaunchForce(effectiveStats.speed, launchParams.power, launchParams.angleRadians),
   );
   const launchSpeed = launchForceMagnitude * LAUNCH_FORCE_TO_SPEED_SCALE;
-  const dragCoefficient = calculateDragCoefficient(airplaneStats.glide);
-  const windEffect = calculateWindEffect(weather, airplaneStats);
+  const dragCoefficient = calculateDragCoefficient(effectiveStats.glide);
+  const windEffect = calculateWindEffect(weather, effectiveStats);
   const horizontalRetention = clamp(1.08 - dragCoefficient * 8, 0.55, 1.05);
   const horizontalVelocity = Math.cos(launchParams.angleRadians) * launchSpeed * horizontalRetention;
-  const verticalVelocity = Math.sin(launchParams.angleRadians) * launchSpeed * (0.48 + airplaneStats.glide * 0.035);
+  const verticalVelocity = Math.sin(launchParams.angleRadians) * launchSpeed * (0.48 + effectiveStats.glide * 0.035);
   const baseAirtimeSeconds = (2 * verticalVelocity) / SIMULATION_GRAVITY;
-  const stabilityBonusSeconds = airplaneStats.stability * 0.08;
+  const stabilityBonusSeconds = effectiveStats.stability * 0.08;
   const airtimeSeconds = clamp(
     baseAirtimeSeconds + stabilityBonusSeconds,
     MIN_AIRTIME_SECONDS,
     Math.max(MIN_AIRTIME_SECONDS, raceDuration),
   );
   const windDistance = windEffect.x * WIND_DISTANCE_SCALE * airtimeSeconds;
-  const turbulencePenalty = Math.max(0, weather.windStrength - airplaneStats.stability) * weather.effects.turbulenceIntensity * 20;
+  const turbulencePenalty =
+    Math.max(0, weather.windStrength - effectiveStats.stability) * weather.effects.turbulenceIntensity * 20;
   const distancePx = Math.max(
     0,
     Math.round(horizontalVelocity * airtimeSeconds * DISTANCE_SCALE + windDistance - turbulencePenalty),
@@ -108,4 +133,21 @@ export function simulateOpponentFlight(
 
 export function generateOpponentScore(flightResult: SimulatedOpponentFlightResult): FlightScoreResult {
   return calculateFlightScore(flightResult);
+}
+
+function applyOpponentFlightBonuses(airplaneStats: AirplaneStats, opponent: Opponent | undefined): AirplaneStats {
+  if (!opponent || !isBossOpponent(opponent)) {
+    return airplaneStats;
+  }
+
+  return {
+    ...airplaneStats,
+    speed: clamp(airplaneStats.speed + BOSS_SKILL_BONUS.speed, 1, 10),
+    glide: clamp(airplaneStats.glide + BOSS_SKILL_BONUS.glide, 1, 10),
+    stability: clamp(airplaneStats.stability + BOSS_SKILL_BONUS.stability, 1, 10),
+  };
+}
+
+function isBossOpponent(opponent: Opponent): boolean {
+  return opponent.title.includes('馆主');
 }
