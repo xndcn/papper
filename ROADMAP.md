@@ -194,17 +194,17 @@
   - [x] 单元测试：SaveManager CRUD 操作（使用 fake-indexeddb 测试）、schema 校验、存档导入导出、GameState 状态管理
   - [x] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过，`pnpm build` 成功
 
-- [ ] **Step 5: Meta 进度系统（ProgressSystem）**
-  - [ ] 创建 `src/systems/ProgressSystem.ts`：跨 Run 永久进度管理纯逻辑模块
-    - [ ] `addExperience(meta, amount) → MetaProgress` — 增加经验值，自动计算升级
-    - [ ] `getMetaLevel(experience) → number` — 根据累计经验计算当前等级（参照 game-design.md「Meta 进度（永久保留）」章节经验等级表）
-    - [ ] `getExperienceForLevel(level) → number` — 获取指定等级所需的累计经验
-    - [ ] `checkUnlockConditions(meta, condition) → boolean` — 检查特定内容是否已满足解锁条件
-    - [ ] `getUnlockedContent(meta) → { airplanes: string[], skills: string[], partPool: string[] }` — 根据当前等级返回已解锁的内容 ID 列表
-    - [ ] `calculateRunRewardExperience(runResult, isVictory) → number` — 计算 Run 结束后获得的经验（胜利 100-150，失败 60-120）
-    - [ ] `updateStatistics(profile, raceResult) → PlayerProfile` — 更新玩家累计统计（总比赛次数、最长飞行距离等）
-  - [ ] 单元测试：经验-等级映射、升级边界、解锁条件判定、Run 奖励经验计算
-  - [ ] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过
+- [x] **Step 5: Meta 进度系统（ProgressSystem）**
+  - [x] 创建 `src/systems/ProgressSystem.ts`：跨 Run 永久进度管理纯逻辑模块
+    - [x] `addExperience(meta, amount) → MetaProgress` — 增加经验值，自动计算升级
+    - [x] `getMetaLevel(experience) → number` — 根据累计经验计算当前等级（参照 game-design.md「Meta 进度（永久保留）」章节经验等级表）
+    - [x] `getExperienceForLevel(level) → number` — 获取指定等级所需的累计经验
+    - [x] `checkUnlockConditions(meta, condition) → boolean` — 检查特定内容是否已满足解锁条件
+    - [x] `getUnlockedContent(meta) → { airplanes: string[], skills: string[], partPool: string[] }` — 根据当前等级返回已解锁的内容 ID 列表
+    - [x] `calculateRunRewardExperience(runResult, isVictory) → number` — 计算 Run 结束后获得的经验（胜利 100-150，失败 60-120）
+    - [x] `updateStatistics(profile, raceResult) → PlayerProfile` — 更新玩家累计统计（总比赛次数、最长飞行距离等）
+  - [x] 单元测试：经验-等级映射、升级边界、解锁条件判定、Run 奖励经验计算
+  - [x] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过
 
 - [ ] **Step 6: 锦标赛地图场景与馆主对手**
   - [ ] 创建 `src/scenes/TournamentMapScene.ts`：锦标赛分支路径地图界面
