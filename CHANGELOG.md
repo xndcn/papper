@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### 变更
+- 完成 Phase 2 Step 5：新增 ProgressSystem Meta 进度纯逻辑，补齐经验等级计算、内容解锁条件、Run 结算经验与玩家累计统计更新，并新增对应单元测试
 - 完成 Phase 2 Step 4：引入 Dexie.js 存档层与 GameState 全局状态单例，补齐存档 schema 校验、导入导出、自动存档回退与 fake-indexeddb 单元测试
 - 完成 Phase 2 Step 3：新增 TournamentSystem 锦标赛核心逻辑、SeedManager 确定性随机工具，扩充锦标赛对手内容，并补齐对应单元测试与验证
 - 完成 Phase 2 Step 2：新增 SkillSystem 纯逻辑模块，补齐主动技能激活、Buff 过期/冲突处理、冷却状态与被动触发判断，并新增对应单元测试
@@ -21,6 +22,9 @@
 - 主场景现在会在中文 Web Font 加载完成后再创建 Phaser 实例，修复无中文系统字体环境下的方块字问题
 
 ### 新增
+- Phase 2 Step 5 Meta 进度系统：
+  - 新增 `src/systems/ProgressSystem.ts`，提供经验累计升级、等级阈值查询、Meta 解锁条件判断、内容池解锁、Run 经验结算与玩家统计更新
+  - 新增 `src/systems/ProgressSystem.test.ts`，覆盖经验-等级映射、升级边界、解锁条件、内容池分层与 Run 结算经验范围
 - Phase 2 Step 4 存档与状态管理：
   - 新增 `src/systems/SaveManager.ts`，基于 Dexie.js 封装 `saves / settings / cache` 三个 store，并提供默认存档、主存档 / 自动存档加载、设置持久化与 JSON 导入导出
   - 新增 `src/utils/GameState.ts`，提供单例化的 SaveData / TournamentRun 读写接口，并在状态变化时发射 `saveDataChanged` / `runChanged` 事件
