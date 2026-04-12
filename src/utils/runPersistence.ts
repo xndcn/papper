@@ -61,7 +61,8 @@ export function settleCompletedRun(
     saveData.unlockedAirplanes,
     getUnlockedContent(metaProgressWithExperience).airplanes,
   );
-  const newlyUnlockedAirplanes = unlockedAirplanes.filter((airplaneId) => !saveData.unlockedAirplanes.includes(airplaneId));
+  const existingUnlockedAirplaneIds = new Set(saveData.unlockedAirplanes);
+  const newlyUnlockedAirplanes = unlockedAirplanes.filter((airplaneId) => !existingUnlockedAirplaneIds.has(airplaneId));
   const finalMetaProgress = {
     ...metaProgressWithExperience,
     totalRunsCompleted: saveData.metaProgress.totalRunsCompleted + 1,
@@ -126,10 +127,12 @@ function mergeUniqueIds(existingIds: readonly string[], nextIds: readonly string
     return existingIds;
   }
 
+  const seenIds = new Set(existingIds);
   const mergedIds = [...existingIds];
 
   for (const nextId of nextIds) {
-    if (!mergedIds.includes(nextId)) {
+    if (!seenIds.has(nextId)) {
+      seenIds.add(nextId);
       mergedIds.push(nextId);
     }
   }

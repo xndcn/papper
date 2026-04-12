@@ -17,7 +17,7 @@ import { persistGameState, ensureGameStateLoaded } from '@/utils/gamePersistence
 import { GameState } from '@/utils/GameState';
 
 const OPEN_BUILD_BUTTON: SceneNavigationButton = {
-  label: '读取存档中…',
+  label: '读取存档中...',
   target: SCENE_KEYS.TOURNAMENT_MAP,
 };
 

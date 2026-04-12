@@ -230,6 +230,8 @@ export class ResultScene extends Phaser.Scene {
               }),
           )
         : [];
+    const hasPendingRunSettlement =
+      hasTournamentFollowUp && resolvedTournamentRun?.status !== 'in_progress' && !data.runSettlementApplied;
 
     const startMainMenu = (menuData?: MainMenuSceneData) => {
       this.scene.start(RETURN_TO_MENU_BUTTON.target, menuData);
@@ -261,7 +263,7 @@ export class ResultScene extends Phaser.Scene {
       });
     });
     returnButton.on('pointerdown', () => {
-      if (hasTournamentFollowUp && resolvedTournamentRun?.status !== 'in_progress' && !data.runSettlementApplied) {
+      if (hasPendingRunSettlement) {
         void this.handlePrimaryAction({
           data,
           hasTournamentFollowUp,
@@ -289,7 +291,7 @@ export class ResultScene extends Phaser.Scene {
       });
     });
     this.input.keyboard?.once('keydown-ESC', () => {
-      if (hasTournamentFollowUp && resolvedTournamentRun?.status !== 'in_progress' && !data.runSettlementApplied) {
+      if (hasPendingRunSettlement) {
         void this.handlePrimaryAction({
           data,
           hasTournamentFollowUp,
@@ -358,12 +360,15 @@ export class ResultScene extends Phaser.Scene {
         return;
       }
 
-      if (resolvedTournamentRun && !data.runSettlementApplied && GameState.getInstance().getSaveData()) {
-        const unlockedRewardSaveData = applyAirplaneUnlockRewards(
-          GameState.getInstance().getSaveData()!,
-          claimedRewards,
-          Date.now(),
-        );
+      if (resolvedTournamentRun && !data.runSettlementApplied) {
+        const currentSaveData = GameState.getInstance().getSaveData();
+
+        if (!currentSaveData) {
+          startMainMenu();
+          return;
+        }
+
+        const unlockedRewardSaveData = applyAirplaneUnlockRewards(currentSaveData, claimedRewards, Date.now());
         const settlement = settleCompletedRun(unlockedRewardSaveData, resolvedTournamentRun);
 
         GameState.getInstance().updateSaveData(() => settlement.saveData);

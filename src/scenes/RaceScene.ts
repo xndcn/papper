@@ -1065,8 +1065,14 @@ export class RaceScene extends Phaser.Scene {
             auto: true,
           });
         }
-      } else if (completion.nextRun.status === 'defeat' && GameState.getInstance().getSaveData()) {
-        const settlement = settleCompletedRun(GameState.getInstance().getSaveData()!, completion.nextRun);
+      } else if (completion.nextRun.status === 'defeat') {
+        const currentSaveData = GameState.getInstance().getSaveData();
+
+        if (!currentSaveData) {
+          return;
+        }
+
+        const settlement = settleCompletedRun(currentSaveData, completion.nextRun);
 
         GameState.getInstance().updateSaveData(() => settlement.saveData);
         void persistGameState();
