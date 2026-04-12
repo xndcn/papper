@@ -20,25 +20,29 @@ export interface ActivatedSkillResult {
   readonly cooldownEnd: number;
 }
 
+export function createSkillBuff(skill: Skill, currentTime: number): Buff {
+  return {
+    id: `${skill.id}_buff`,
+    name: skill.name,
+    description: skill.description,
+    duration: skill.effect.duration ?? 0,
+    rarity: skill.rarity,
+    stackable: false,
+    iconKey: skill.iconKey,
+    statModifiers: extractStatModifiers(skill.effect.value),
+    specialEffect: skill.effect.specialId,
+    sourceSkillId: skill.id,
+    startTime: currentTime,
+  };
+}
+
 export function activateSkill(skill: Skill, currentTime: number): ActivatedSkillResult {
   if (skill.type !== 'active') {
     throw new Error('activateSkill requires an active skill');
   }
 
   return {
-    buff: {
-      id: `${skill.id}_buff`,
-      name: skill.name,
-      description: skill.description,
-      duration: skill.effect.duration ?? 0,
-      rarity: skill.rarity,
-      stackable: false,
-      iconKey: skill.iconKey,
-      statModifiers: extractStatModifiers(skill.effect.value),
-      specialEffect: skill.effect.specialId,
-      sourceSkillId: skill.id,
-      startTime: currentTime,
-    },
+    buff: createSkillBuff(skill, currentTime),
     cooldownEnd: currentTime + (skill.cooldown ?? 0),
   };
 }

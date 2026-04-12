@@ -33,6 +33,12 @@ const BASE_OPPONENT_WEIGHT = 6;
 const FNV_PRIME_32 = 16777619;
 const NON_BOSS_SELECTION_PENALTY = 8;
 
+export interface RaceCompletion {
+  readonly nextRun: TournamentRun;
+  readonly rewardOptions: readonly Reward[];
+  readonly specialRewards: readonly Reward[];
+}
+
 export function createTournamentRun(seed: number, layerCount = DEFAULT_LAYER_COUNT): TournamentRun {
   return {
     seed,
@@ -131,7 +137,7 @@ export function startRace(run: TournamentRun, node: TournamentNode): RaceConfig 
   };
 }
 
-export function completeRace(run: TournamentRun, result: RaceResult): TournamentRun {
+export function completeRace(run: TournamentRun, result: RaceResult): RaceCompletion {
   const currentNode = findNodeById(run.map, run.currentNodeId);
 
   if (!currentNode || (currentNode.type !== 'race' && currentNode.type !== 'elite' && currentNode.type !== 'boss')) {
@@ -140,18 +146,26 @@ export function completeRace(run: TournamentRun, result: RaceResult): Tournament
 
   if (result.ranking !== 1) {
     return {
-      ...run,
-      raceResults: [...run.raceResults, result],
-      status: 'defeat',
+      nextRun: {
+        ...run,
+        raceResults: [...run.raceResults, result],
+        status: 'defeat',
+      },
+      rewardOptions: [],
+      specialRewards: [],
     };
   }
 
-  const rewardedRun = applyRewards(run, currentNode.rewards);
-
   return {
-    ...rewardedRun,
-    raceResults: [...rewardedRun.raceResults, result],
-    status: currentNode.type === 'boss' || run.currentLayer >= run.map.totalLayers - 1 ? 'victory' : 'in_progress',
+    nextRun: {
+      ...run,
+      raceResults: [...run.raceResults, result],
+      status: currentNode.type === 'boss' || run.currentLayer >= run.map.totalLayers - 1 ? 'victory' : 'in_progress',
+    },
+    rewardOptions: createRewardOptions(run.seed, currentNode),
+    specialRewards: currentNode.type === 'elite' || currentNode.type === 'boss'
+      ? currentNode.rewards.filter((reward) => reward.type !== 'coins')
+      : [],
   };
 }
 
@@ -189,6 +203,15 @@ export function abandonRun(run: TournamentRun): TournamentRun {
     ...run,
     status: 'abandoned',
   };
+}
+
+export function claimRaceRewards(
+  run: TournamentRun,
+  selectedReward: Reward | undefined,
+  specialRewards: readonly Reward[] = [],
+): TournamentRun {
+  const claimedRewards = selectedReward ? [selectedReward, ...specialRewards] : [...specialRewards];
+  return applyRewards(run, claimedRewards);
 }
 
 export function getNodeById(map: TournamentMap, nodeId: string): TournamentNode | undefined {
@@ -323,6 +346,41 @@ function createNodeRewards(
   }
 
   return rewards;
+}
+
+function createRewardOptions(seed: number, node: TournamentNode): readonly Reward[] {
+  const rewardsByType = new Map(node.rewards.map((reward) => [reward.type, reward] as const));
+  const optionSeed = deriveNodeSeed(seed, `${node.id}_reward_options`);
+  const rng = createRNG(optionSeed);
+  const partFallback = shuffle(rng, getParts())[0];
+  const skillFallback = shuffle(rng, getSkills().filter((skill) => skill.type === 'active'))[0];
+  const coinsReward =
+    rewardsByType.get('coins') ??
+    ({
+      type: 'coins',
+      value: 20 + node.difficulty * 10,
+      rarity: node.type === 'boss' ? 'legendary' : node.type === 'elite' ? 'rare' : 'common',
+    } satisfies Reward);
+  const partReward =
+    rewardsByType.get('part') ??
+    (partFallback
+      ? {
+          type: 'part',
+          value: partFallback,
+          rarity: partFallback.rarity,
+        }
+      : undefined);
+  const skillReward =
+    rewardsByType.get('skill') ??
+    (skillFallback
+      ? {
+          type: 'skill',
+          value: skillFallback,
+          rarity: skillFallback.rarity,
+        }
+      : undefined);
+
+  return [coinsReward, partReward, skillReward].flatMap((reward) => (reward ? [reward] : []));
 }
 
 function selectOpponent(

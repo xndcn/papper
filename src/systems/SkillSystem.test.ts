@@ -7,6 +7,7 @@ import {
   applyBuff,
   calculateBuffedStats,
   checkPassiveTrigger,
+  createSkillBuff,
   getActiveBuffs,
   isSkillReady,
   removeExpiredBuffs,
@@ -71,6 +72,27 @@ describe('SkillSystem', () => {
 
     expect(skill).toBeDefined();
     expect(() => activateSkill(skill!, 1000)).toThrowError(/active skill/i);
+  });
+
+  it('creates runtime buffs from passive skills for auto-trigger flows', () => {
+    const skill = getSkillById('headwind_rider');
+
+    expect(skill).toBeDefined();
+    expect(createSkillBuff(skill!, 2400)).toEqual({
+      id: 'headwind_rider_buff',
+      name: '逆风飞翔',
+      description: '遭遇逆风时自动调整纸翼姿态，换取额外稳定与滑翔效率。',
+      duration: 5000,
+      rarity: 'rare',
+      stackable: false,
+      iconKey: 'skill_headwind_rider',
+      statModifiers: {
+        glide: 1,
+        stability: 2,
+      },
+      sourceSkillId: 'headwind_rider',
+      startTime: 2400,
+    });
   });
 
   it('updates cooldown snapshots and reports readiness consistently', () => {

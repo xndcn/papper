@@ -11,16 +11,32 @@ import {
 } from '@/config/constants';
 import {
   calculateBuildPreview,
+  calculateBuildPreviewWithSkills,
   equipPart,
+  equipSkill,
   getCompatibleParts,
   getEquippedPartsList,
+  getSkillSlotCount,
   sanitizeEquippedParts,
+  unequipSkill,
   unequipPart,
+  type EquippedSkills,
   type EquippedPartsBySlot,
 } from '@/systems/BuildSystem';
-import { getAirplanes, getParts, getWeatherPresets } from '@/systems/ContentLoader';
+import { getAirplanes, getParts, getSkillsByType, getWeatherPresets } from '@/systems/ContentLoader';
 import { selectWeather } from '@/systems/WeatherSystem';
-import type { Airplane, AirplaneStats, BuildSceneData, Part, PartSlot, RaceConfig, SceneNavigationButton, TournamentRun, Weather } from '@/types';
+import type {
+  Airplane,
+  AirplaneStats,
+  BuildSceneData,
+  Part,
+  PartSlot,
+  RaceConfig,
+  SceneNavigationButton,
+  Skill,
+  TournamentRun,
+  Weather,
+} from '@/types';
 
 const START_RACE_BUTTON: SceneNavigationButton = {
   label: '出战',
@@ -108,15 +124,42 @@ function formatRaceConfigSubtitle(raceConfig: RaceConfig | undefined): string {
   return `锦标赛节点：${nodeTypeLabel} · 对手 ${raceConfig.opponent.name}`;
 }
 
+function formatSkillDescription(skill: Skill): string {
+  const cooldownText = skill.cooldown ? `CD ${(skill.cooldown / 1000).toFixed(0)}s` : '被动';
+  return `${skill.name} · ${cooldownText} · ${skill.description}`;
+}
+
+function getPassiveSkillsFromRun(run: TournamentRun | undefined): readonly Skill[] {
+  return (run?.runSkills ?? []).filter((skill) => skill.type === 'passive');
+}
+
+function getAvailableActiveSkills(run: TournamentRun | undefined): readonly Skill[] {
+  const activeSkills = [...getSkillsByType('active'), ...(run?.runSkills ?? []).filter((skill) => skill.type === 'active')];
+  const seenSkillIds = new Set<string>();
+
+  return activeSkills.filter((skill) => {
+    if (seenSkillIds.has(skill.id)) {
+      return false;
+    }
+
+    seenSkillIds.add(skill.id);
+    return true;
+  });
+}
+
 export class BuildScene extends Phaser.Scene {
   private readonly airplanes = getAirplanes();
   private readonly inventory = getParts();
   private selectedAirplaneIndex = 0;
   private weather!: Weather;
   private equippedParts: EquippedPartsBySlot = {};
+  private equippedSkills: EquippedSkills = [];
   private airplaneEntries: AirplaneEntry[] = [];
   private slotTexts: Phaser.GameObjects.Text[] = [];
   private inventoryTexts: Phaser.GameObjects.Text[] = [];
+  private skillSlotTexts: Phaser.GameObjects.Text[] = [];
+  private skillTexts: Phaser.GameObjects.Text[] = [];
+  private skillLibraryLabelText?: Phaser.GameObjects.Text;
   private weatherTitleText?: Phaser.GameObjects.Text;
   private weatherDescriptionText?: Phaser.GameObjects.Text;
   private previewTitleText?: Phaser.GameObjects.Text;
@@ -136,6 +179,7 @@ export class BuildScene extends Phaser.Scene {
     this.raceConfig = data?.raceConfig;
     this.weather = this.raceConfig?.weather ?? selectWeather(getWeatherPresets(), Date.now());
     this.equippedParts = {};
+    this.equippedSkills = [];
 
     this.add.text(GAME_WIDTH / 2, 18, '赛前构建', SCENE_TITLE_STYLE).setOrigin(0.5);
     this.add
@@ -148,8 +192,8 @@ export class BuildScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add.text(22, 58, '机型列表', SCENE_SUBTITLE_STYLE);
-    this.add.text(184, 58, '槽位装配', SCENE_SUBTITLE_STYLE);
-    this.add.text(318, 58, '零件背包', SCENE_SUBTITLE_STYLE);
+    this.add.text(184, 58, '槽位与技能', SCENE_SUBTITLE_STYLE);
+    this.add.text(318, 58, '零件 / 技能库', SCENE_SUBTITLE_STYLE);
 
     this.createAirplaneEntries();
     this.weatherTitleText = this.add.text(22, 194, '', SCENE_SUBTITLE_STYLE);
@@ -212,7 +256,7 @@ export class BuildScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         262,
-        '移动端可直接点选机型、零件与“出战”；桌面端也可用 Enter 出战、Esc 返回',
+        '移动端可直接点选机型、零件、技能与“出战”；桌面端也可用 Enter 出战、Esc 返回',
         SCENE_HINT_STYLE,
       )
       .setOrigin(0.5, 1);
@@ -262,6 +306,7 @@ export class BuildScene extends Phaser.Scene {
 
     this.selectedAirplaneIndex = index;
     this.equippedParts = sanitizeEquippedParts(this.getSelectedAirplane(), this.equippedParts);
+    this.equippedSkills = this.equippedSkills.slice(0, getSkillSlotCount(this.getSelectedAirplane()));
     this.refreshBuildView();
   }
 
@@ -286,13 +331,17 @@ export class BuildScene extends Phaser.Scene {
       slotText.destroy();
     }
     this.slotTexts = [];
+    for (const skillSlotText of this.skillSlotTexts) {
+      skillSlotText.destroy();
+    }
+    this.skillSlotTexts = [];
 
     this.getSelectedAirplane().slots.forEach((slot, index) => {
       const equippedPart = this.equippedParts[slot];
       const slotText = this.add
         .text(
           184,
-          78 + index * 22,
+          78 + index * 16,
           equippedPart ? `${SLOT_LABELS[slot]}：${equippedPart.name}` : `${SLOT_LABELS[slot]}：空槽`,
           equippedPart ? EQUIPPED_PANEL_TEXT_STYLE : PANEL_TEXT_STYLE,
         )
@@ -304,6 +353,24 @@ export class BuildScene extends Phaser.Scene {
 
       this.slotTexts.push(slotText);
     });
+
+    Array.from({ length: getSkillSlotCount(this.getSelectedAirplane()) }, (_, index) => {
+      const equippedSkill = this.equippedSkills[index];
+      const skillSlotText = this.add
+        .text(
+          184,
+          78 + this.getSelectedAirplane().slots.length * 16 + 12 + index * 16,
+          equippedSkill ? `技能 ${index + 1}：${equippedSkill.name}` : `技能 ${index + 1}：空槽`,
+          equippedSkill ? EQUIPPED_PANEL_TEXT_STYLE : PANEL_TEXT_STYLE,
+        )
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          this.equippedSkills = unequipSkill(this.equippedSkills, index);
+          this.refreshBuildView();
+        });
+
+      this.skillSlotTexts.push(skillSlotText);
+    });
   }
 
   private refreshInventoryPanel(): void {
@@ -311,13 +378,17 @@ export class BuildScene extends Phaser.Scene {
       inventoryText.destroy();
     }
     this.inventoryTexts = [];
+    for (const skillText of this.skillTexts) {
+      skillText.destroy();
+    }
+    this.skillTexts = [];
 
     getCompatibleParts(this.getSelectedAirplane(), this.inventory).forEach((part, index) => {
       const isEquipped = this.equippedParts[part.slot]?.id === part.id;
       const inventoryText = this.add
         .text(
           318,
-          78 + index * 14,
+          78 + index * 12,
           `${SLOT_LABELS[part.slot]}·${part.name} ${formatPartModifiers(part)}`,
           isEquipped ? EQUIPPED_PANEL_TEXT_STYLE : PANEL_TEXT_STYLE,
         )
@@ -329,6 +400,32 @@ export class BuildScene extends Phaser.Scene {
 
       this.inventoryTexts.push(inventoryText);
     });
+
+    this.skillLibraryLabelText?.destroy();
+    this.skillLibraryLabelText = this.add.text(318, 146, '主动技能', SCENE_SUBTITLE_STYLE);
+
+    getAvailableActiveSkills(this.tournamentRun).forEach((skill, index) => {
+      const isEquipped = this.equippedSkills.some((equippedSkill) => equippedSkill.id === skill.id);
+      const skillText = this.add
+        .text(
+          318,
+          162 + index * 14,
+          formatSkillDescription(skill),
+          isEquipped ? EQUIPPED_PANEL_TEXT_STYLE : PANEL_TEXT_STYLE,
+        )
+        .setWordWrapWidth(140)
+        .setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          this.equippedSkills = equipSkill(
+            this.equippedSkills,
+            skill,
+            getSkillSlotCount(this.getSelectedAirplane()),
+          );
+          this.refreshBuildView();
+        });
+
+      this.skillTexts.push(skillText);
+    });
   }
 
   private refreshWeatherPanel(): void {
@@ -338,9 +435,12 @@ export class BuildScene extends Phaser.Scene {
 
   private refreshStatsPreview(): void {
     const airplane = this.getSelectedAirplane();
-    const previewStats = calculateBuildPreview(airplane, this.equippedParts);
+    const passiveSkills = getPassiveSkillsFromRun(this.tournamentRun);
+    const previewStats = calculateBuildPreviewWithSkills(airplane, this.equippedParts, passiveSkills);
 
-    this.previewTitleText?.setText(`${airplane.name} · 实时属性预览`);
+    this.previewTitleText?.setText(
+      `${airplane.name} · 实时属性预览${passiveSkills.length > 0 ? `（含被动：${passiveSkills.map((skill) => skill.name).join(' / ')}）` : ''}`,
+    );
     this.statsGraphics?.clear();
 
     STAT_ROWS.forEach((row, index) => {
@@ -363,6 +463,7 @@ export class BuildScene extends Phaser.Scene {
       airplaneName: airplane.name,
       airplaneStats: calculateBuildPreview(airplane, this.equippedParts),
       equippedParts: getEquippedPartsList(this.equippedParts, airplane.slots),
+      equippedSkills: this.equippedSkills,
       weather: this.raceConfig?.weather ?? this.weather,
       opponentId: this.raceConfig?.opponent.id,
       tournamentRun: this.tournamentRun,

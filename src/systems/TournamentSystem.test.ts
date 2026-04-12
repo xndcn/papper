@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { getParts, getSkills, getWeatherPresets } from '@/systems/ContentLoader';
 import {
   abandonRun,
+  claimRaceRewards,
   completeRace,
   createTournamentRun,
   generateTournamentMap,
@@ -123,7 +124,7 @@ describe('TournamentSystem', () => {
     expect(firstConfig.difficulty).toBe(node.difficulty);
   });
 
-  it('records winning race rewards into the run state and marks boss clears as victory', () => {
+  it('returns reward choices for victories and applies selected plus special boss rewards', () => {
     const rewardPart = getParts()[1]!;
     const rewardSkill = getSkills()[0]!;
     const weather = getWeatherPresets()[1]!;
@@ -151,7 +152,7 @@ describe('TournamentSystem', () => {
       visitedNodeIds: [node.id],
     });
 
-    const completedRun = completeRace(
+    const completion = completeRace(
       run,
       createRaceResult({
         raceId: node.id,
@@ -159,12 +160,27 @@ describe('TournamentSystem', () => {
       }),
     );
 
-    expect(completedRun.runCoins).toBe(80);
-    expect(completedRun.collectedParts).toEqual([rewardPart]);
-    expect(completedRun.runSkills).toEqual([rewardSkill]);
-    expect(completedRun.raceResults).toHaveLength(1);
-    expect(completedRun.status).toBe('victory');
-    expect(isRunComplete(completedRun)).toBe(true);
+    expect(completion.nextRun.runCoins).toBe(0);
+    expect(completion.nextRun.collectedParts).toEqual([]);
+    expect(completion.nextRun.runSkills).toEqual([]);
+    expect(completion.nextRun.raceResults).toHaveLength(1);
+    expect(completion.nextRun.status).toBe('victory');
+    expect(completion.rewardOptions.map((reward) => reward.type)).toEqual(['coins', 'part', 'skill']);
+    expect(completion.specialRewards).toEqual([
+      { type: 'part', value: rewardPart, rarity: rewardPart.rarity },
+      { type: 'skill', value: rewardSkill, rarity: rewardSkill.rarity },
+    ]);
+
+    const claimedRun = claimRaceRewards(
+      completion.nextRun,
+      completion.rewardOptions.find((reward) => reward.type === 'coins')!,
+      completion.specialRewards,
+    );
+
+    expect(claimedRun.runCoins).toBe(80);
+    expect(claimedRun.collectedParts).toEqual([rewardPart]);
+    expect(claimedRun.runSkills).toEqual([rewardSkill]);
+    expect(isRunComplete(claimedRun)).toBe(true);
   });
 
   it('returns differentiated end rewards and supports defeat / abandon flows', () => {

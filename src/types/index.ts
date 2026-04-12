@@ -164,6 +164,8 @@ export interface ResultSceneData {
   readonly replayData?: RaceSceneData;
   readonly scoreBreakdown?: ScoreBreakdown;
   readonly nextTournamentRun?: TournamentRun;
+  readonly rewardOptions?: readonly Reward[];
+  readonly specialRewards?: readonly Reward[];
 }
 
 export interface BuildSceneData {
@@ -177,6 +179,7 @@ export interface RaceSceneData {
   readonly airplaneName?: string;
   readonly airplaneStats?: AirplaneStats;
   readonly equippedParts?: readonly Part[];
+  readonly equippedSkills?: readonly Skill[];
   readonly weather?: Weather;
   readonly opponentId?: string;
   readonly tournamentRun?: TournamentRun;
