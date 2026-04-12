@@ -152,6 +152,10 @@ export interface SceneNavigationButton {
   readonly target: SceneKey;
 }
 
+export interface MainMenuSceneData {
+  readonly message?: string;
+}
+
 export interface ResultSceneData {
   readonly distance: number;
   readonly flightTimeMs: number;
@@ -166,6 +170,8 @@ export interface ResultSceneData {
   readonly nextTournamentRun?: TournamentRun;
   readonly rewardOptions?: readonly Reward[];
   readonly specialRewards?: readonly Reward[];
+  readonly runCompletionSummary?: readonly string[];
+  readonly runSettlementApplied?: boolean;
 }
 
 export interface BuildSceneData {

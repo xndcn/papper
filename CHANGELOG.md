@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### 变更
+- 完成 Phase 2 Step 8：主菜单接入存档检查与“继续游戏/新游戏”入口，TournamentMap / Build / Race / Result 全链路接入 GameState + SaveManager，并打通 Run 中自动存档与终局结算回主菜单
 - 完成 Phase 2 Step 7：BuildScene 新增技能槽位与主动技能列表，RaceScene 接入主动技能 / 被动 Buff HUD，ResultScene 新增三选一奖励与锦标赛奖励回写
 - 完成 Phase 2 Step 6：新增 TournamentMapScene 锦标赛地图、班级赛馆主林小冲、馆主 AI 优化与 MainMenu → TournamentMap → Build → Race → Result → TournamentMap 的场景闭环
 - 完成 Phase 2 Step 5：新增 ProgressSystem Meta 进度纯逻辑，补齐经验等级计算、内容解锁条件、Run 结算经验与玩家累计统计更新，并新增对应单元测试
@@ -24,6 +25,11 @@
 - 主场景现在会在中文 Web Font 加载完成后再创建 Phaser 实例，修复无中文系统字体环境下的方块字问题
 
 ### 新增
+- Phase 2 Step 8 完整 Roguelike 循环集成与测试收尾：
+  - 新增 `src/utils/gamePersistence.ts` 与 `src/utils/runPersistence.ts` / `src/utils/runPersistence.test.ts`，集中封装存档加载、自动存档、Run 终局经验/金币/零件保留与解锁回写逻辑
+  - 更新 `src/scenes/MainMenuScene.ts`、`TournamentMapScene.ts`、`BuildScene.ts`、`RaceScene.ts` 与 `ResultScene.ts`，打通“新游戏 / 继续游戏”、地图/构建/比赛过程存档、失败即时结算与 Boss 终局奖励确认后的主菜单回流
+  - 扩展 `src/types/index.ts` 的场景数据类型，支持主菜单提示消息与 Run 结算摘要透传
+  - 完成 `pnpm test` / `pnpm test:coverage` / `pnpm lint` / `pnpm build` 与 Playwright MCP 存档恢复关键路径验证
 - Phase 2 Step 7 技能场景集成与赛间奖励：
   - 扩展 `src/systems/BuildSystem.ts` / `SkillSystem.ts` / `TournamentSystem.ts` 及对应单元测试，补齐技能槽位数量、主动技能装配、被动预览、通用技能 Buff 构建与赛后奖励领取逻辑
   - 更新 `src/scenes/BuildScene.ts`，提供按机型变化的技能槽位、主动技能库与包含被动技能加成的实时属性预览

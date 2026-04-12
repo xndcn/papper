@@ -57,7 +57,10 @@ import type {
   Skill,
   Weather,
 } from '@/types';
+import { persistGameState } from '@/utils/gamePersistence';
+import { GameState } from '@/utils/GameState';
 import { formatRelativeRacePosition, getWindDirectionArrow } from '@/utils/scenePresentation';
+import { describeCompletedRunSettlement, settleCompletedRun } from '@/utils/runPersistence';
 import { clamp, lerp, scaleVector, subtractVectors, vectorMagnitude, type Vector2Like } from '@/utils/math';
 
 const FINISH_RACE_BUTTON: SceneNavigationButton = {
@@ -1054,6 +1057,33 @@ export class RaceScene extends Phaser.Scene {
         rewardOptions: completion.rewardOptions,
         specialRewards: completion.specialRewards,
       };
+
+      if (completion.nextRun.status === 'in_progress') {
+        if (GameState.getInstance().getSaveData()) {
+          GameState.getInstance().setCurrentRun(completion.nextRun);
+          void persistGameState({
+            auto: true,
+          });
+        }
+      } else if (completion.nextRun.status === 'defeat') {
+        const currentSaveData = GameState.getInstance().getSaveData();
+
+        if (!currentSaveData) {
+          return;
+        }
+
+        const settlement = settleCompletedRun(currentSaveData, completion.nextRun);
+
+        GameState.getInstance().updateSaveData(() => settlement.saveData);
+        void persistGameState();
+        this.resultData = {
+          ...this.resultData,
+          runCompletionSummary: describeCompletedRunSettlement(settlement),
+          runSettlementApplied: true,
+        };
+      } else if (GameState.getInstance().getSaveData()) {
+        GameState.getInstance().setCurrentRun(completion.nextRun);
+      }
     }
 
     this.finishButton?.setAlpha(1);

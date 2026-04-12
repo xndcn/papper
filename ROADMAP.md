@@ -240,23 +240,23 @@
     - [x] 精英/Boss 比赛额外显示特殊奖励
   - [x] 验证：可在构建界面装备技能、比赛中使用技能并看到效果、赛后选择奖励
 
-- [ ] **Step 8: 完整 Roguelike 循环集成与测试收尾**
-  - [ ] 集成 SaveManager 到场景生命周期
-    - [ ] MainMenuScene：检查存档 → 显示"继续游戏"（有存档时）/ "新游戏"
-    - [ ] 比赛结束自动存档（通过 GameState.updateSaveData + SaveManager.autoSave）
-    - [ ] Run 结束时：计算经验奖励 → 更新 MetaProgress → 保存存档 → 返回主菜单
-  - [ ] 集成 ProgressSystem 到 Run 结算流程
-    - [ ] Run 胜利/失败 → 分别计算经验（game-design.md「锦标赛 Run」章节 Run 结算规则）
-    - [ ] 零件保留规则（胜利全额保留，失败保留 1 个）
-    - [ ] 等级提升时检查新解锁内容
-  - [ ] 完整 Roguelike Run 流程验证
-    - [ ] 新游戏 → 主菜单 → 开始锦标赛 → 锦标赛地图（选择节点）→ 构建（选飞机 + 零件 + 技能）→ 比赛（使用技能）→ 结算（选奖励）→ 回到地图 → 重复 4-5 场 → Boss 战 → Run 结束 → 经验结算 → 主菜单
-    - [ ] 继续游戏 → 加载存档 → 恢复到上次 Run 状态
-  - [ ] 所有新增 systems 和 utils 模块的 Vitest 单元测试覆盖率 ≥ 80%
-  - [ ] Playwright MCP 视觉验证：所有新场景截图 + 关键交互流程测试
-  - [ ] 更新 ROADMAP.md：标记 Phase 2 各 Step 完成状态
-  - [ ] 更新 CHANGELOG.md：记录 Phase 2 所有新增功能
-  - [ ] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过，`pnpm build` 成功
+- [x] **Step 8: 完整 Roguelike 循环集成与测试收尾**
+  - [x] 集成 SaveManager 到场景生命周期
+    - [x] MainMenuScene：检查存档 → 显示"继续游戏"（有存档时）/ "新游戏"
+    - [x] 比赛结束自动存档（通过 GameState.updateSaveData + SaveManager.autoSave）
+    - [x] Run 结束时：计算经验奖励 → 更新 MetaProgress → 保存存档 → 返回主菜单
+  - [x] 集成 ProgressSystem 到 Run 结算流程
+    - [x] Run 胜利/失败 → 分别计算经验（game-design.md「锦标赛 Run」章节 Run 结算规则）
+    - [x] 零件保留规则（胜利全额保留，失败保留 1 个）
+    - [x] 等级提升时检查新解锁内容
+  - [x] 完整 Roguelike Run 流程验证
+    - [x] 新游戏 → 主菜单 → 开始锦标赛 → 锦标赛地图（选择节点）→ 构建（选飞机 + 零件 + 技能）→ 比赛（使用技能）→ 结算（选奖励）→ 回到地图 → 重复 4-5 场 → Boss 战 → Run 结束 → 经验结算 → 主菜单
+    - [x] 继续游戏 → 加载存档 → 恢复到上次 Run 状态
+  - [x] 所有新增 systems 和 utils 模块的 Vitest 单元测试覆盖率 ≥ 80%
+  - [x] Playwright MCP 视觉验证：所有新场景截图 + 关键交互流程测试
+  - [x] 更新 ROADMAP.md：标记 Phase 2 各 Step 完成状态
+  - [x] 更新 CHANGELOG.md：记录 Phase 2 所有新增功能
+  - [x] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过，`pnpm build` 成功
 
 ## Phase 3: 世界地图与叙事
 
