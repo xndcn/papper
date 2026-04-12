@@ -5,6 +5,7 @@
 ## [Unreleased]
 
 ### 变更
+- 完成 Phase 2 Step 3：新增 TournamentSystem 锦标赛核心逻辑、SeedManager 确定性随机工具，扩充锦标赛对手内容，并补齐对应单元测试与验证
 - 完成 Phase 2 Step 2：新增 SkillSystem 纯逻辑模块，补齐主动技能激活、Buff 过期/冲突处理、冷却状态与被动触发判断，并新增对应单元测试
 - 完成 Phase 2 Step 1：补齐技能 / Buff / 锦标赛 / 存档相关类型定义，新增技能与 Buff 内容数据，并扩展 ContentLoader 的类型安全查询与 schema 校验
 - 将 Phase 2 Roguelike 循环路线图从 7 个概要条目细化为 8 个 Step（共 70+ 子任务），每个 Step 包含具体的模块/文件、函数签名、验证标准和测试要求，便于 Agent 逐步执行
@@ -19,6 +20,11 @@
 - 主场景现在会在中文 Web Font 加载完成后再创建 Phaser 实例，修复无中文系统字体环境下的方块字问题
 
 ### 新增
+- Phase 2 Step 3 锦标赛逻辑：
+  - 新增 `src/systems/TournamentSystem.ts`，提供带种子的锦标赛路径生成、可选节点查询、节点选择、比赛配置生成、比赛结算、Run 完成判断与放弃逻辑
+  - 新增 `src/utils/SeedManager.ts` 与对应单元测试，补齐确定性 PRNG、范围整数、带权选择与洗牌工具
+  - 扩展 `src/data/opponents.json` 与 `ContentLoader` 测试，新增 3 名不同难度 / 性格的 AI 对手，供普通赛 / 精英赛 / Boss 节点复用
+  - 新增 `src/systems/TournamentSystem.test.ts`，覆盖地图确定性、节点分布、Run 状态流转、比赛配置与结算奖励
 - Phase 2 Step 2 技能运行时逻辑：
   - 新增 `src/systems/SkillSystem.ts`，封装技能激活、冷却刷新、Buff 生效/过期过滤、属性修正与被动触发判断
   - 新增 `src/systems/SkillSystem.test.ts`，覆盖主动技能转 Buff、冷却就绪、Buff 冲突解析与最终属性计算

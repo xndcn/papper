@@ -17,6 +17,60 @@
       "difficulty": 2,
       "spriteKey": "opponent_rookie_lin",
       "backstory": "总在操场角落练习弹弓发射的小林，把每一次比赛都当成百米冲刺。"
+    },
+    {
+      "id": "storm_wei",
+      "name": "阿巍",
+      "title": "迎风练习生",
+      "personality": "balanced",
+      "airplaneId": "classic_glider",
+      "partIds": ["glide_wing_tabs", "stabilizer_tail_strip", "wax_coating"],
+      "dialogues": {
+        "greeting": "今天风向不稳？正好，我最喜欢在乱流里找节奏。",
+        "onWin": "别急着低头，先学会和风做朋友。",
+        "onLose": "你顶风修姿态的判断很稳，这局我服气。",
+        "taunt": "逆风只是另一种上升气流，看你能不能抓住。",
+        "respect": "你没有被风吓退，已经比很多人强了。"
+      },
+      "difficulty": 5,
+      "spriteKey": "opponent_storm_wei",
+      "backstory": "阿巍习惯在教学楼走廊口练习抬头滑翔，专门研究不同风向下的攻角变化。"
+    },
+    {
+      "id": "trickster_qiao",
+      "name": "小乔",
+      "title": "花式盘旋者",
+      "personality": "tricky",
+      "airplaneId": "butterfly_wing",
+      "partIds": ["butterfly_wing_fins", "paper_tail_fin", "balance_beads"],
+      "dialogues": {
+        "greeting": "比赛可不只有直线，转身的那一瞬间才最好玩。",
+        "onWin": "看见了吗？机头一抬，整片天空都是我的舞台。",
+        "onLose": "你把节奏卡得太准了，我那点花招都被你看穿啦。",
+        "taunt": "要不要猜猜，我下一次压机头会从哪边切过去？",
+        "respect": "能在乱转里保持冷静的人，才是真正的高手。"
+      },
+      "difficulty": 7,
+      "spriteKey": "opponent_trickster_qiao",
+      "backstory": "小乔总爱在看台边缘练习急转和拉升，拿一架蝴蝶翼就能玩出各种轨迹。"
+    },
+    {
+      "id": "ace_yun",
+      "name": "云澈",
+      "title": "纸翼馆主",
+      "personality": "cautious",
+      "airplaneId": "classic_glider",
+      "partIds": ["streamlined_nose_cone", "glide_wing_tabs", "stabilizer_tail_strip", "speed_varnish", "balance_beads"],
+      "dialogues": {
+        "greeting": "欢迎来到决赛航道。能走到这里，说明你已经懂得如何让纸翼听话。",
+        "onWin": "终点前的每一次修正都决定胜负，你还差最后一点耐心。",
+        "onLose": "很好，你把自己的纸翼真正飞成了传说。接下来的天空，由你去闯。",
+        "taunt": "别急着抢第一段速度，真正的差距在最后那次稳住机头。",
+        "respect": "你把力量、姿态与风向连成了一条线，这就是冠军该有的样子。"
+      },
+      "difficulty": 9,
+      "spriteKey": "opponent_ace_yun",
+      "backstory": "云澈长期担任校内纸翼赛的终点裁判兼守擂者，擅长把稳定和节奏压到极致。"
     }
   ]
 }
