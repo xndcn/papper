@@ -154,24 +154,24 @@
   - [x] 单元测试：技能激活冷却、Buff 叠加/过期/冲突、被动触发条件、属性修正计算
   - [x] 验证：`pnpm test:coverage` ≥ 80%（systems/），`pnpm lint` 通过
 
-- [ ] **Step 3: 锦标赛系统核心逻辑（TournamentSystem）**
-  - [ ] 创建 `src/systems/TournamentSystem.ts`：锦标赛路径生成与 Run 状态管理纯逻辑模块
-    - [ ] `generateTournamentMap(seed, layerCount?) → TournamentMap` — 基于种子生成分支路径地图（默认 5 层，每层 2-3 个节点），节点类型分布：普通比赛 > 商店/事件 > 精英 > Boss（最终层固定）
-    - [ ] `getAvailableNodes(run) → TournamentNode[]` — 获取当前层可选的下一步节点
-    - [ ] `selectNode(run, nodeId) → TournamentRun` — 选择节点，更新 Run 状态（推进到下一层，记录已访问节点）
-    - [ ] `startRace(run, node) → RaceConfig` — 从比赛节点生成 RaceConfig（对手、天气、难度）
-    - [ ] `completeRace(run, result) → TournamentRun` — 记录比赛结果，更新 Run 内金币和零件
-    - [ ] `isRunComplete(run) → boolean` — 判断 Run 是否结束（胜利到达最终层/失败）
-    - [ ] `getRunRewards(run) → Reward[]` — 计算 Run 结束时的总奖励（根据胜败差异化）
-    - [ ] `abandonRun(run) → TournamentRun` — 放弃当前 Run
-  - [ ] 创建 `src/utils/SeedManager.ts`：确定性伪随机数生成器（基于种子的 PRNG）
-    - [ ] `createRNG(seed: number) → () => number` — 返回一个基于种子的 0-1 随机数生成函数
-    - [ ] `randomInt(rng: () => number, min: number, max: number) → number` — 生成范围内的随机整数
-    - [ ] `weightedChoice<T>(rng: () => number, items: T[], weights: number[]) → T` — 带权重的随机选择
-    - [ ] `shuffle<T>(rng: () => number, array: T[]) → T[]` — 确定性洗牌
-  - [ ] 新增更多 AI 对手到 `src/data/opponents.json`：新增 2-3 个不同难度和性格的对手（用于锦标赛普通比赛和精英比赛节点）
-  - [ ] 单元测试：地图生成确定性（同种子同结果）、节点类型分布合理性、Run 状态流转、种子管理器
-  - [ ] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过
+- [x] **Step 3: 锦标赛系统核心逻辑（TournamentSystem）**
+  - [x] 创建 `src/systems/TournamentSystem.ts`：锦标赛路径生成与 Run 状态管理纯逻辑模块
+    - [x] `generateTournamentMap(seed, layerCount?) → TournamentMap` — 基于种子生成分支路径地图（默认 5 层，每层 2-3 个节点），节点类型分布：普通比赛 > 商店/事件 > 精英 > Boss（最终层固定）
+    - [x] `getAvailableNodes(run) → TournamentNode[]` — 获取当前层可选的下一步节点
+    - [x] `selectNode(run, nodeId) → TournamentRun` — 选择节点，更新 Run 状态（推进到下一层，记录已访问节点）
+    - [x] `startRace(run, node) → RaceConfig` — 从比赛节点生成 RaceConfig（对手、天气、难度）
+    - [x] `completeRace(run, result) → TournamentRun` — 记录比赛结果，更新 Run 内金币和零件
+    - [x] `isRunComplete(run) → boolean` — 判断 Run 是否结束（胜利到达最终层/失败）
+    - [x] `getRunRewards(run) → Reward[]` — 计算 Run 结束时的总奖励（根据胜败差异化）
+    - [x] `abandonRun(run) → TournamentRun` — 放弃当前 Run
+  - [x] 创建 `src/utils/SeedManager.ts`：确定性伪随机数生成器（基于种子的 PRNG）
+    - [x] `createRNG(seed: number) → () => number` — 返回一个基于种子的 0-1 随机数生成函数
+    - [x] `randomInt(rng: () => number, min: number, max: number) → number` — 生成范围内的随机整数
+    - [x] `weightedChoice<T>(rng: () => number, items: T[], weights: number[]) → T` — 带权重的随机选择
+    - [x] `shuffle<T>(rng: () => number, array: T[]) → T[]` — 确定性洗牌
+  - [x] 新增更多 AI 对手到 `src/data/opponents.json`：新增 2-3 个不同难度和性格的对手（用于锦标赛普通比赛和精英比赛节点）
+  - [x] 单元测试：地图生成确定性（同种子同结果）、节点类型分布合理性、Run 状态流转、种子管理器
+  - [x] 验证：`pnpm test:coverage` ≥ 80%，`pnpm lint` 通过
 
 - [ ] **Step 4: IndexedDB 存档系统（Dexie.js + SaveManager）**
   - [ ] 安装 Dexie.js 依赖（`pnpm add dexie`）

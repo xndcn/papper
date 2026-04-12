@@ -177,6 +177,16 @@ export interface RaceSceneData {
   readonly opponentId?: string;
 }
 
+export interface RaceConfig {
+  readonly seed: number;
+  readonly nodeId: string;
+  readonly nodeType: Extract<TournamentNodeType, 'race' | 'elite' | 'boss'>;
+  readonly difficulty: number;
+  readonly opponent: Opponent;
+  readonly weather: Weather;
+  readonly rewards: readonly Reward[];
+}
+
 export interface RaceParticipantResult {
   readonly name: string;
   readonly distance: number;

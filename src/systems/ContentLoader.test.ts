@@ -30,7 +30,7 @@ describe('ContentLoader', () => {
     expect(getAirplanes()).toHaveLength(3);
     expect(getParts()).toHaveLength(10);
     expect(getWeatherPresets()).toHaveLength(3);
-    expect(getOpponents()).toHaveLength(1);
+    expect(getOpponents()).toHaveLength(4);
     expect(getSkills()).toHaveLength(5);
     expect(getBuffs()).toHaveLength(6);
 
@@ -55,6 +55,10 @@ describe('ContentLoader', () => {
     expect(getOpponentById('rookie_lin')).toMatchObject({
       personality: 'aggressive',
       airplaneId: 'classic_dart',
+    });
+    expect(getOpponentById('storm_wei')).toMatchObject({
+      personality: 'balanced',
+      airplaneId: 'classic_glider',
     });
   });
 
